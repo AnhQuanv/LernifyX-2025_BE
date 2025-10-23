@@ -1,3 +1,4 @@
+import { Course } from '../../../modules/course/entities/course.entity';
 import { RefreshToken } from '../../refresh-token/entities/refresh-token.entity';
 import { Role } from '../../role/entities/role.entity';
 import {
@@ -44,11 +45,14 @@ export class User {
   codeExpiresAt: Date | null;
 
   @ManyToOne(() => Role, (role) => role.users, { cascade: true })
-  @JoinColumn({ name: 'role_id' }) // User giữ khóa ngoại
+  @JoinColumn({ name: 'role_id' })
   role: Role;
 
   @OneToMany(() => RefreshToken, (token) => token.user)
   refreshTokens: RefreshToken[];
+
+  @OneToMany(() => Course, (course) => course.instructor)
+  courses: Course[];
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;

@@ -10,6 +10,10 @@ import { RefreshTokenModule } from './modules/refresh-token/refresh-token.module
 import { RefreshToken } from './modules/refresh-token/entities/refresh-token.entity';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+import { CategoryModule } from './modules/category/category.module';
+import { CourseModule } from './modules/course/course.module';
+import { Category } from './modules/category/entities/category.entity';
+import { Course } from './modules/course/entities/course.entity';
 
 @Module({
   imports: [
@@ -23,7 +27,7 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handleba
       username: process.env.DB_USER || 'root',
       password: process.env.DB_PASS || '',
       database: process.env.DB_NAME || '',
-      entities: [User, Role, RefreshToken],
+      entities: [User, Role, RefreshToken, Category, Course],
       synchronize: false,
       logging: false,
       migrationsRun: false,
@@ -31,6 +35,8 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handleba
     UserModule,
     RoleModule,
     AuthModule,
+    CourseModule,
+    CategoryModule,
     RefreshTokenModule,
     MailerModule.forRootAsync({
       useFactory: (config: ConfigService) => ({
@@ -57,6 +63,8 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handleba
       }),
       inject: [ConfigService],
     }),
+    CourseModule,
+    CategoryModule,
   ],
   controllers: [],
   providers: [],

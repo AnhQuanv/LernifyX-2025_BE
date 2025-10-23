@@ -38,7 +38,10 @@ export class AuthService {
     );
 
     if (!userRes) {
-      throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
+      throw new UnauthorizedException({
+        message: 'Email hoặc mật khẩu không đúng',
+        errorCode: 'INVALID_CREDENTIALS',
+      });
     }
 
     const payload: PayloadJwt = {
@@ -66,7 +69,22 @@ export class AuthService {
       where: { email },
       relations: ['role'],
     });
-    if (!user || !(await bcrypt.compare(pass, user.password))) return null;
+
+    // Nếu không tìm thấy user → trả null
+    if (!user) return null;
+
+    // Nếu tài khoản chưa kích hoạt → ném lỗi 401
+    if (!user.isActive) {
+      throw new UnauthorizedException({
+        message: 'Tài khoản chưa được kích hoạt, vui lòng xác minh email.',
+        errorCode: 'ACCOUNT_NOT_VERIFIED',
+      });
+    }
+
+    // So sánh mật khẩu
+    const isPasswordValid = await bcrypt.compare(pass, user.password);
+    if (!isPasswordValid) return null;
+
     return user;
   }
 
@@ -121,9 +139,16 @@ export class AuthService {
         message: 'Refresh token không hợp lệ hoặc đã bị thu hồi',
       });
     }
-    return this.jwtService.verify(token, {
-      secret: process.env.JWT_REFRESH_SECRET,
-    });
+    try {
+      return this.jwtService.verify(token, {
+        secret: process.env.JWT_REFRESH_SECRET,
+      });
+    } catch (err) {
+      throw new UnauthorizedException({
+        errorCode: 'EXPIRED_REFRESH_TOKEN',
+        message: 'Refresh token đã hết hạn hoặc không hợp lệ',
+      });
+    }
   }
 
   async handleRegister(registerDto: RegisterDto) {
@@ -132,7 +157,10 @@ export class AuthService {
       where: { email: registerDto.email },
     });
     if (user) {
-      throw new BadRequestException('Email đã tồn tại');
+      throw new BadRequestException({
+        message: 'Email đã tồn tại',
+        errorCode: 'EMAIL_EXISTS',
+      });
     }
 
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
@@ -142,7 +170,10 @@ export class AuthService {
     });
 
     if (!role) {
-      throw new NotFoundException('Role không tồn tại');
+      throw new NotFoundException({
+        message: 'Role không tồn tại',
+        errorCode: 'ROLE_NOT_FOUND',
+      });
     }
 
     const codeId = Math.floor(100000 + Math.random() * 900000);

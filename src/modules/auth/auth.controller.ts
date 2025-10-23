@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  InternalServerErrorException,
   Post,
   Req,
   Res,
@@ -85,6 +86,8 @@ export class AuthController {
   }
 
   @Post('logout')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('student', 'teacher', 'admin')
   @HttpCode(200)
   async logout(
     @Req() req: RequestWithCookies,
@@ -102,7 +105,7 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('teacher')
+  @Roles('admin')
   @Get('me')
   getMe(@Req() req) {
     return 123;
@@ -147,5 +150,10 @@ export class AuthController {
     console.log('Body: ', body);
     await this.authService.handleVerifyMail(body.email, body.codeId);
     return ApiResponse.success(null, 'Xác thực email thành công');
+  }
+
+  @Get('test-error')
+  testError() {
+    throw new InternalServerErrorException('Lỗi hệ thống giả lập');
   }
 }

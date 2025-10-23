@@ -63,6 +63,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     } else if (exception instanceof Error) {
       message = exception.message;
       errors = [exception.message];
+      errorCode = 'SERVER_ERROR';
       ExceptionHandler.handleSystem(exception, this.logger, `${method} ${url}`);
     }
 
