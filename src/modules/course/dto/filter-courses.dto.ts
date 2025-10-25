@@ -5,4 +5,5 @@ export class FilterCoursesDto {
   sortBy?: string;
   page?: number;
   limit?: number;
+  search?: string;
 }

@@ -19,6 +19,7 @@ export class CourseService {
     sortBy = 'default',
     page = 1,
     limit = 6,
+    search,
   }: FilterCoursesDto) {
     const query = this.courseRepository
       .createQueryBuilder('course')
@@ -37,6 +38,14 @@ export class CourseService {
     if (rating && rating !== 'all') {
       query.andWhere('course.rating >= :rating', { rating: Number(rating) });
     }
+
+    if (search && search.trim() !== '') {
+      query.andWhere(
+        '(course.title LIKE :search OR course.description LIKE :search OR instructor.fullName LIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
     switch (sortBy) {
       case 'a-z':
         query.orderBy('course.title', 'ASC');
@@ -54,27 +63,15 @@ export class CourseService {
         query.orderBy('course.createdAt', 'DESC'); // mặc định: mới nhất
         break;
     }
-
     const skip = (page - 1) * limit;
     query.skip(skip).take(limit);
 
     const [courses, total] = await query.getManyAndCount();
 
-    // const formatted = courses.map((course) => ({
-    //   id: course.id,
-    //   title: course.title,
-    //   price: course.price,
-    //   rating: course.rating,
-    //   level: course.level,
-    //   image: course.image,
-    //   categoryName: course.category?.categoryName ?? null,
-    //   instructorName: course.instructor?.fullName ?? null,
-    // }));
     const formatted = plainToInstance(CourseDto, courses, {
       excludeExtraneousValues: true,
     });
     console.log('Formatted Courses:', formatted);
-
     return {
       pagination: {
         total,
@@ -84,5 +81,18 @@ export class CourseService {
       },
       data: formatted,
     };
+  }
+
+  async handleGetHomeCourses(): Promise<CourseDto[]> {
+    const courses = await this.courseRepository.find({
+      where: { status: 'published' },
+      relations: ['category', 'instructor'],
+      order: { students: 'DESC' },
+      take: 12,
+    });
+    const formatted = plainToInstance(CourseDto, courses, {
+      excludeExtraneousValues: true,
+    });
+    return formatted;
   }
 }
