@@ -8,6 +8,7 @@ export class CourseController {
 
   @Get('filter')
   async filterCourses(
+    @Query('search') search?: string,
     @Query('category') category: string = 'all',
     @Query('level') level: string = 'all',
     @Query('rating') rating: string = 'all',
@@ -22,8 +23,14 @@ export class CourseController {
       sortBy,
       page,
       limit,
+      search,
     });
-
     return ApiResponse.success(result, 'Lọc khóa học thành công');
+  }
+
+  @Get('home')
+  async getHomeCourses() {
+    const result = await this.courseService.handleGetHomeCourses();
+    return ApiResponse.success(result, 'Lấy danh sách khóa học thành công');
   }
 }
