@@ -14,6 +14,16 @@ import { CategoryModule } from './modules/category/category.module';
 import { CourseModule } from './modules/course/course.module';
 import { Category } from './modules/category/entities/category.entity';
 import { Course } from './modules/course/entities/course.entity';
+import { WishlistModule } from './modules/wishlist/wishlist.module';
+import { CartItemModule } from './modules/cart_item/cart_item.module';
+import { Wishlist } from './modules/wishlist/entities/wishlist.entity';
+import { CartItem } from './modules/cart_item/entities/cart_item.entity';
+import { ChapterModule } from './modules/chapter/chapter.module';
+import { LessonModule } from './modules/lesson/lesson.module';
+import { CommentModule } from './modules/comment/comment.module';
+import { Chapter } from './modules/chapter/entities/chapter.entity';
+import { Lesson } from './modules/lesson/entities/lesson.entity';
+import { Comment } from './modules/comment/entities/comment.entity';
 
 @Module({
   imports: [
@@ -27,7 +37,18 @@ import { Course } from './modules/course/entities/course.entity';
       username: process.env.DB_USER || 'root',
       password: process.env.DB_PASS || '',
       database: process.env.DB_NAME || '',
-      entities: [User, Role, RefreshToken, Category, Course],
+      entities: [
+        User,
+        Role,
+        RefreshToken,
+        Category,
+        Course,
+        Wishlist,
+        CartItem,
+        Chapter,
+        Lesson,
+        Comment,
+      ],
       synchronize: false,
       logging: false,
       migrationsRun: false,
@@ -38,6 +59,7 @@ import { Course } from './modules/course/entities/course.entity';
     CourseModule,
     CategoryModule,
     RefreshTokenModule,
+    CommentModule,
     MailerModule.forRootAsync({
       useFactory: (config: ConfigService) => ({
         transport: {
@@ -65,6 +87,11 @@ import { Course } from './modules/course/entities/course.entity';
     }),
     CourseModule,
     CategoryModule,
+    WishlistModule,
+    CartItemModule,
+    ChapterModule,
+    LessonModule,
+    CommentModule,
   ],
   controllers: [],
   providers: [],

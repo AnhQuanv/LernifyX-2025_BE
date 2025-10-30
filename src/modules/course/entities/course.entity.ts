@@ -1,3 +1,4 @@
+import { Chapter } from '../../../modules/chapter/entities/chapter.entity';
 import { Category } from '../../../modules/category/entities/category.entity';
 import { User } from '../../../modules/user/entities/user.entity';
 import {
@@ -6,13 +7,15 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
-  PrimaryColumn,
+  OneToMany,
+  PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Comment } from '../../../modules/comment/entities/comment.entity';
 
 @Entity('course')
 export class Course {
-  @PrimaryColumn('uuid', { name: 'id' })
+  @PrimaryGeneratedColumn('uuid', { name: 'id' })
   id: string;
 
   @Column({ name: 'title', type: 'varchar' })
@@ -20,6 +23,12 @@ export class Course {
 
   @Column({ name: 'description', type: 'text' })
   description: string;
+
+  @Column({ name: 'requirements', type: 'json', nullable: true })
+  requirements: string[];
+
+  @Column({ name: 'learnings', type: 'json', nullable: true })
+  learnings: string[];
 
   @Column({ name: 'duration', type: 'int' })
   duration: number;
@@ -74,6 +83,12 @@ export class Course {
   @ManyToOne(() => User, (user) => user.courses)
   @JoinColumn({ name: 'instructor_id' })
   instructor: User;
+
+  @OneToMany(() => Chapter, (chapter) => chapter.course, { cascade: true })
+  chapters: Chapter[];
+
+  @OneToMany(() => Comment, (comment) => comment.course)
+  comments: Comment[];
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;

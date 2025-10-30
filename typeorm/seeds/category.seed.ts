@@ -1,30 +1,48 @@
-import { Category } from '../../src/modules/category/entities/category.entity';
 import { DataSource } from 'typeorm';
+import { Category } from '../../src/modules/category/entities/category.entity';
 
-export const seedCategories = async (dataSource: DataSource) => {
-  const categoryRepo = dataSource.getRepository(Category);
+export const categorySeeder = async (dataSource: DataSource) => {
+  const categoryRepository = dataSource.getRepository(Category);
 
-  // Kiểm tra xem dữ liệu đã có chưa (tránh tạo trùng)
-  const count = await categoryRepo.count();
-  if (count > 0) {
-    console.log('Categories already seeded');
-    return;
-  }
-
-  // Mảng dữ liệu mẫu
   const categories = [
-    { categoryName: 'Programming' },
-    { categoryName: 'Design' },
-    { categoryName: 'Marketing' },
-    { categoryName: 'Business' },
-    { categoryName: 'Photography' },
+    {
+      categoryName: 'Web Development',
+    },
+    {
+      categoryName: 'Mobile Development',
+    },
+    {
+      categoryName: 'Data Science',
+    },
+    {
+      categoryName: 'Artificial Intelligence',
+    },
+    {
+      categoryName: 'UI/UX Design',
+    },
+    {
+      categoryName: 'Business & Management',
+    },
+    {
+      categoryName: 'Marketing',
+    },
+    {
+      categoryName: 'Cybersecurity',
+    },
+    {
+      categoryName: 'Cloud Computing',
+    },
+    {
+      categoryName: 'Game Development',
+    },
+    {
+      categoryName: 'DevOps & Tools',
+    },
+    {
+      categoryName: 'Personal Development',
+    },
   ];
 
-  // Tạo entity
-  const categoryEntities = categoryRepo.create(categories);
-
-  // Lưu vào DB
-  await categoryRepo.save(categoryEntities);
-
-  console.log('✅ Categories seeded successfully!');
+  await categoryRepository.save(categories);
+  console.log('✅ Seeded categories successfully!');
 };

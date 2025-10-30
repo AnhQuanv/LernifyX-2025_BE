@@ -4,7 +4,7 @@ import { Course } from './entities/course.entity';
 import { Repository } from 'typeorm';
 import { FilterCoursesDto } from './dto/filter-courses.dto';
 import { plainToInstance } from 'class-transformer';
-import { CourseDto } from './dto/course.dto';
+import { CourseDetailDto, CourseDto } from './dto/course.dto';
 
 @Injectable()
 export class CourseService {
@@ -94,5 +94,23 @@ export class CourseService {
       excludeExtraneousValues: true,
     });
     return formatted;
+  }
+
+  async handleGetCourseDetail(courseId: string): Promise<CourseDetailDto> {
+    const course = await this.courseRepository.findOne({
+      where: { id: courseId, status: 'published' },
+      relations: [
+        'category',
+        'instructor',
+        'chapters',
+        'chapters.lessons',
+        'comments',
+        'comments.user',
+      ],
+    });
+    if (!course) throw new Error('Course not found');
+    return plainToInstance(CourseDetailDto, course, {
+      excludeExtraneousValues: true,
+    });
   }
 }

@@ -1,4 +1,3 @@
-import { seedCategories } from '../typeorm/seeds/category.seed';
 import { seedRoles } from '../typeorm/seeds/role.seed';
 import { seedUsers } from '../typeorm/seeds/user.seed';
 import { dataSource } from './typeorm.config';
@@ -11,7 +10,7 @@ const runSeed = async () => {
 
     await seedRoles(dataSource);
     await seedUsers(dataSource);
-    await seedCategories(dataSource);
+    // await seedCategories(dataSource);
     await seedCourses(dataSource);
 
     await dataSource.destroy();

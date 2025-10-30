@@ -1,6 +1,8 @@
+import { Wishlist } from '../../../modules/wishlist/entities/wishlist.entity';
 import { Course } from '../../../modules/course/entities/course.entity';
 import { RefreshToken } from '../../refresh-token/entities/refresh-token.entity';
 import { Role } from '../../role/entities/role.entity';
+import { CartItem } from '../../../modules/cart_item/entities/cart_item.entity';
 import {
   Entity,
   Column,
@@ -11,6 +13,7 @@ import {
   OneToMany,
   ManyToOne,
 } from 'typeorm';
+import { Comment } from '../../../modules/comment/entities/comment.entity';
 
 @Entity('user')
 export class User {
@@ -53,6 +56,15 @@ export class User {
 
   @OneToMany(() => Course, (course) => course.instructor)
   courses: Course[];
+
+  @OneToMany(() => Wishlist, (wishlist) => wishlist.user)
+  wishlist: Wishlist[];
+
+  @OneToMany(() => CartItem, (cartItem) => cartItem.user)
+  cartItems: CartItem[];
+
+  @OneToMany(() => Comment, (comment) => comment.user)
+  comments: Comment[];
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;

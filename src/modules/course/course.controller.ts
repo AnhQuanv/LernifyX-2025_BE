@@ -33,4 +33,10 @@ export class CourseController {
     const result = await this.courseService.handleGetHomeCourses();
     return ApiResponse.success(result, 'Lấy danh sách khóa học thành công');
   }
+
+  @Get('detail')
+  async getCourseDetail(@Query('courseId') courseId: string) {
+    const result = await this.courseService.handleGetCourseDetail(courseId);
+    return ApiResponse.success(result, 'Lấy chi tiết khóa học thành công');
+  }
 }
