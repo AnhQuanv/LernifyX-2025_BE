@@ -1,34 +1,71 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { CartItemService } from './cart_item.service';
-import { CreateCartItemDto } from './dto/create-cart_item.dto';
-import { UpdateCartItemDto } from './dto/update-cart_item.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { RequestWithUser } from '../user/user.controller';
+import { ApiResponse } from '../../common/bases/api-response';
 
-@Controller('cart-item')
+@Controller('v1/cart-item')
 export class CartItemController {
   constructor(private readonly cartItemService: CartItemService) {}
 
-  @Post()
-  create(@Body() createCartItemDto: CreateCartItemDto) {
-    return this.cartItemService.create(createCartItemDto);
-  }
-
   @Get()
-  findAll() {
-    return this.cartItemService.findAll();
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('student')
+  async getUserCart(
+    @Req() req: RequestWithUser,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 6,
+  ) {
+    const userId = req.user.sub;
+    const result = await this.cartItemService.handleGetUserCart(
+      userId,
+      page,
+      limit,
+    );
+    return ApiResponse.success(result, 'Lấy danh sách giỏ hàng thành công');
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.cartItemService.findOne(+id);
+  @Post(':courseId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('student')
+  @HttpCode(200)
+  async addToCart(
+    @Req() req: RequestWithUser,
+    @Param('courseId') courseId: string,
+  ) {
+    const userId = req.user.sub;
+    const result = await this.cartItemService.handleAddToCart(userId, courseId);
+    return ApiResponse.success(
+      result,
+      'Thêm vào danh sách giỏ hàng thành công',
+    );
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCartItemDto: UpdateCartItemDto) {
-    return this.cartItemService.update(+id, updateCartItemDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.cartItemService.remove(+id);
+  @Delete(':courseId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('student')
+  @HttpCode(200)
+  async removeFromCart(
+    @Req() req: RequestWithUser,
+    @Param('courseId') courseId: string,
+  ) {
+    const userId = req.user.sub;
+    const result = await this.cartItemService.handleRemoveFromCart(
+      userId,
+      courseId,
+    );
+    return ApiResponse.success(result, 'Đã xóa khỏi danh sách giỏ hàng');
   }
 }

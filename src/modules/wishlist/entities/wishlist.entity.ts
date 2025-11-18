@@ -6,10 +6,12 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  Unique,
   UpdateDateColumn,
 } from 'typeorm';
 
 @Entity('wishlist')
+@Unique(['user', 'course'])
 export class Wishlist {
   @PrimaryGeneratedColumn('uuid')
   id: string;

@@ -5,7 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { AuthRequestDto, RegisterDto } from './dto/auth-request.dto';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { User } from '../user/entities/user.entity';
 import * as bcrypt from 'bcrypt';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -36,7 +36,6 @@ export class AuthService {
       authRequestDto.email,
       authRequestDto.password,
     );
-
     if (!userRes) {
       throw new UnauthorizedException({
         message: 'Email hoặc mật khẩu không đúng',
@@ -51,15 +50,13 @@ export class AuthService {
       roleName: userRes.role.roleName,
     };
 
-    const accessToken = this.generateAccessToken(payload);
-
     const refreshToken = await this.generateRefreshToken(payload);
+    await this.revokeAllTokensForUserExcept(userRes.userId, refreshToken);
+    const accessToken = this.generateAccessToken(payload);
 
     const user = plainToInstance(UserResponseDto, userRes, {
       excludeExtraneousValues: true,
     });
-
-    console.log('user: ', user);
 
     return { accessToken, refreshToken, user };
   }
@@ -70,10 +67,8 @@ export class AuthService {
       relations: ['role'],
     });
 
-    // Nếu không tìm thấy user → trả null
     if (!user) return null;
 
-    // Nếu tài khoản chưa kích hoạt → ném lỗi 401
     if (!user.isActive) {
       throw new UnauthorizedException({
         message: 'Tài khoản chưa được kích hoạt, vui lòng xác minh email.',
@@ -81,7 +76,6 @@ export class AuthService {
       });
     }
 
-    // So sánh mật khẩu
     const isPasswordValid = await bcrypt.compare(pass, user.password);
     if (!isPasswordValid) return null;
 
@@ -91,7 +85,6 @@ export class AuthService {
   generateAccessToken(payload: PayloadJwt): string {
     return this.jwtService.sign(payload, {
       secret: process.env.JWT_ACCESS_SECRET,
-      expiresIn: '10m',
     });
   }
 
@@ -101,7 +94,10 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new Error('Không tìm thấy user để tạo refresh token');
+      throw new NotFoundException({
+        message: 'Không tìm thấy user để tạo refresh token',
+        errorCode: 'RESOURCE_NOT_FOUND',
+      });
     }
 
     const token = this.jwtService.sign(payload, {
@@ -121,10 +117,19 @@ export class AuthService {
   }
 
   async findValidToken(token: string): Promise<RefreshToken | null> {
-    return await this.refreshTokenRepository.findOne({
-      where: { token, isRevoked: false },
+    const tokenRecord = await this.refreshTokenRepository.findOne({
+      where: { token },
       relations: ['user'],
     });
+
+    if (!tokenRecord) {
+      return null;
+    }
+
+    if (tokenRecord.isRevoked) {
+      return null;
+    }
+    return tokenRecord;
   }
 
   async revokeToken(token: string): Promise<void> {
@@ -135,7 +140,7 @@ export class AuthService {
     const tokenRecord = await this.findValidToken(token);
     if (!tokenRecord) {
       throw new UnauthorizedException({
-        errorCode: 'INVALID_TOKEN',
+        errorCode: 'REVOKED_REFRESH_TOKEN',
         message: 'Refresh token không hợp lệ hoặc đã bị thu hồi',
       });
     }
@@ -143,7 +148,8 @@ export class AuthService {
       return this.jwtService.verify(token, {
         secret: process.env.JWT_REFRESH_SECRET,
       });
-    } catch (err) {
+    } catch {
+      await this.revokeToken(token);
       throw new UnauthorizedException({
         errorCode: 'EXPIRED_REFRESH_TOKEN',
         message: 'Refresh token đã hết hạn hoặc không hợp lệ',
@@ -152,7 +158,6 @@ export class AuthService {
   }
 
   async handleRegister(registerDto: RegisterDto) {
-    console.log('dto: ', registerDto);
     const user = await this.userRepository.findOne({
       where: { email: registerDto.email },
     });
@@ -172,7 +177,7 @@ export class AuthService {
     if (!role) {
       throw new NotFoundException({
         message: 'Role không tồn tại',
-        errorCode: 'ROLE_NOT_FOUND',
+        errorCode: 'RESOURCE_NOT_FOUND',
       });
     }
 
@@ -190,24 +195,26 @@ export class AuthService {
       codeId,
       codeExpiresAt: codeExpiresAt.toDate(),
     });
+    const savedUser = await this.userRepository.save(newUser);
     await this.mailerService.sendMail({
-      to: newUser.email,
+      to: savedUser.email,
       subject: 'Activate your LearnifyX account',
       template: 'verify.hbs',
       context: {
-        name: newUser?.fullName ?? newUser.email,
+        name: savedUser.fullName,
         activationCode: codeId,
         expiresAtFormatted: codeExpiresAt.format('HH:mm:ss [on] DD/MM/YYYY'),
       },
     });
-    await this.userRepository.save(newUser);
   }
 
   async handleVerifyMail(email: string, codeId: number) {
-    console.log('email, codeId: ', email, codeId);
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) {
-      throw new NotFoundException('Email không tồn tại');
+      throw new NotFoundException({
+        message: 'Email không tồn tại',
+        errorCode: 'RESOURCE_NOT_FOUND',
+      });
     }
     if (user.codeId !== codeId) {
       throw new BadRequestException({
@@ -222,6 +229,116 @@ export class AuthService {
       });
     }
     user.isActive = true;
+    user.codeId = null;
+    user.codeExpiresAt = null;
+    await this.userRepository.save(user);
+  }
+
+  async revokeAllTokensForUserExcept(
+    userId: string,
+    excludeToken: string,
+  ): Promise<void> {
+    await this.refreshTokenRepository.update(
+      { user: { userId }, token: Not(excludeToken) },
+      { isRevoked: true },
+    );
+  }
+
+  async handlePasswordForget(email: string) {
+    const user = await this.userRepository.findOne({
+      where: { email },
+    });
+    if (!user) {
+      throw new NotFoundException({
+        message: 'Email does not exist',
+        errorCode: 'RESOURCE_NOT_FOUND',
+      });
+    }
+    const codeId = Math.floor(100000 + Math.random() * 900000);
+    const codeExpiresAt = dayjs().add(5, 'minute');
+
+    user.codeId = codeId;
+    user.codeExpiresAt = codeExpiresAt.toDate();
+
+    const savedUser = await this.userRepository.save(user);
+    await this.mailerService.sendMail({
+      to: savedUser.email,
+      subject: 'Reset your LearnifyX password',
+      template: 'reset-password.hbs',
+      context: {
+        name: savedUser.fullName,
+        otpCode: codeId,
+        expiresAtFormatted: codeExpiresAt.format('HH:mm:ss [on] DD/MM/YYYY'),
+      },
+    });
+  }
+
+  async handleSendVerifyMail(email: string) {
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new NotFoundException({
+        message: 'Email does not exist',
+        errorCode: 'RESOURCE_NOT_FOUND',
+      });
+    }
+
+    const codeId = Math.floor(100000 + Math.random() * 900000);
+    const codeExpiresAt = dayjs().add(5, 'minute');
+
+    user.codeId = codeId;
+    user.codeExpiresAt = codeExpiresAt.toDate();
+
+    await this.userRepository.save(user);
+    const savedUser = await this.userRepository.save(user);
+    await this.mailerService.sendMail({
+      to: savedUser.email,
+      subject: 'Verify your LearnifyX account',
+      template: 'verify.hbs',
+      context: {
+        name: savedUser.fullName,
+        activationCode: codeId,
+        expiresAtFormatted: codeExpiresAt.format('HH:mm:ss [on] DD/MM/YYYY'),
+      },
+    });
+  }
+
+  async handleResetPassword(
+    email: string,
+    codeId: number,
+    newPassword: string,
+    confirmPassword: string,
+  ) {
+    if (newPassword !== confirmPassword) {
+      throw new BadRequestException({
+        message: 'New password and confirm password do not match',
+        errorCode: 'PASSWORD_MISMATCH',
+      });
+    }
+
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new NotFoundException({
+        message: 'Email does not exist',
+        errorCode: 'RESOURCE_NOT_FOUND',
+      });
+    }
+
+    if (user.codeId !== codeId) {
+      throw new BadRequestException({
+        message: 'Invalid verification code',
+        errorCode: 'INVALID_CODE',
+      });
+    }
+
+    if (!user.codeExpiresAt || user.codeExpiresAt < new Date()) {
+      throw new BadRequestException({
+        message: 'Verification code has expired',
+        errorCode: 'EXPIRED_CODE',
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
     user.codeId = null;
     user.codeExpiresAt = null;
     await this.userRepository.save(user);

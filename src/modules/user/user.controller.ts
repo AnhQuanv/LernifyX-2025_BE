@@ -1,34 +1,53 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Body, Controller, Get, Put, Req, UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { ApiResponse } from 'src/common/bases/api-response';
+import { Request, Response } from 'express';
+import { PayloadJwt } from '../auth/auth.interface';
+import { UpdatePasswordDto, UpdateProfileDto } from './dto/update-user.dto';
 
-@Controller('user')
+export interface RequestWithUser extends Request {
+  user: PayloadJwt;
+}
+
+@Controller('v1/profile')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('student')
+  @Get('me')
+  async getProfile(@Req() req: RequestWithUser) {
+    const user_id = req.user.sub;
+    const user = await this.userService.handleGetProfile(user_id);
+    return ApiResponse.success(user, 'Lấy thông tin user thành công');
   }
 
-  @Get()
-  findAll() {
-    return this.userService.findAll();
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('student')
+  @Put('edit')
+  async updateProfile(
+    @Req() req: RequestWithUser,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    const userId = req.user.sub;
+    const updatedUser = await this.userService.handleUpdateProfile(userId, dto);
+    return ApiResponse.success(
+      updatedUser,
+      'Cập nhật thông tin user thành công',
+    );
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.userService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.userService.update(+id, updateUserDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.userService.remove(+id);
+  @UseGuards(JwtAuthGuard)
+  @Put('change-password')
+  async changePassword(
+    @Req() req: RequestWithUser,
+    @Body() dto: UpdatePasswordDto,
+  ) {
+    const userId = req.user.sub;
+    await this.userService.handleChangePassword(userId, dto);
+    return ApiResponse.success(null, 'Cập nhật mật khẩu thành công');
   }
 }

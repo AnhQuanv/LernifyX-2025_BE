@@ -1,4 +1,48 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateUserDto } from './create-user.dto';
+import {
+  IsString,
+  IsOptional,
+  IsDateString,
+  MinLength,
+  Matches,
+} from 'class-validator';
 
-export class UpdateUserDto extends PartialType(CreateUserDto) {}
+export class UpdateProfileDto {
+  @IsOptional()
+  @IsString()
+  fullName?: string;
+
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @IsOptional()
+  @IsDateString()
+  dateOfBirth?: string;
+
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  @IsOptional()
+  @IsString()
+  avatar?: string;
+}
+
+export class UpdatePasswordDto {
+  @IsString()
+  @MinLength(6, { message: 'Mật khẩu cũ phải ít nhất 6 ký tự' })
+  oldPassword: string;
+
+  @IsString()
+  @MinLength(6, { message: 'Mật khẩu mới phải ít nhất 6 ký tự' })
+  @Matches(/(?=.*[A-Z])/, {
+    message: 'Mật khẩu mới phải có ít nhất 1 ký tự hoa',
+  })
+  @Matches(/(?=.*[0-9])/, {
+    message: 'Mật khẩu mới phải có ít nhất 1 số',
+  })
+  @Matches(/(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?])/, {
+    message: 'Mật khẩu mới phải có ít nhất 1 ký tự đặc biệt',
+  })
+  newPassword: string;
+}

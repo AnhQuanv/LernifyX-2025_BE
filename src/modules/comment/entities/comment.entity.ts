@@ -19,8 +19,11 @@ export class Comment {
   @Column({ type: 'text' })
   content: string;
 
-  @Column({ type: 'int', default: 0 })
-  rating: number;
+  @Column({ type: 'int', nullable: true })
+  rating: number | null;
+
+  @Column({ type: 'varchar', length: 20, default: 'lesson' })
+  type: 'course' | 'lesson';
 
   @ManyToOne(() => User, (user) => user.comments, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })

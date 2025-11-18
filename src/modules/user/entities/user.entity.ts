@@ -14,6 +14,7 @@ import {
   ManyToOne,
 } from 'typeorm';
 import { Comment } from '../../../modules/comment/entities/comment.entity';
+import { Payment } from '../../payment/entities/payment.entity';
 
 @Entity('user')
 export class User {
@@ -32,11 +33,11 @@ export class User {
   @Column({ type: 'varchar' })
   phone: string;
 
-  @Column({ name: 'date_of_birth', type: 'date' })
-  dateOfBirth: string;
+  @Column({ name: 'date_of_birth', type: 'date', nullable: true })
+  dateOfBirth: Date | null;
 
-  @Column({ type: 'varchar' })
-  address: string;
+  @Column({ type: 'varchar', nullable: true })
+  address: string | null;
 
   @Column({ name: 'is_active', type: 'boolean', default: false })
   isActive: boolean;
@@ -46,6 +47,9 @@ export class User {
 
   @Column({ name: 'code_expires_at', type: 'timestamp', nullable: true })
   codeExpiresAt: Date | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  avatar: string | null;
 
   @ManyToOne(() => Role, (role) => role.users, { cascade: true })
   @JoinColumn({ name: 'role_id' })
@@ -65,6 +69,9 @@ export class User {
 
   @OneToMany(() => Comment, (comment) => comment.user)
   comments: Comment[];
+
+  @OneToMany(() => Payment, (payment) => payment.user)
+  payments: Payment[];
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;

@@ -24,6 +24,11 @@ import { CommentModule } from './modules/comment/comment.module';
 import { Chapter } from './modules/chapter/entities/chapter.entity';
 import { Lesson } from './modules/lesson/entities/lesson.entity';
 import { Comment } from './modules/comment/entities/comment.entity';
+import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
+import { PaymentModule } from './modules/payment/payment.module';
+import { PaymentItemsModule } from './modules/payment_items/payment_items.module';
+import { Payment } from './modules/payment/entities/payment.entity';
+import { PaymentItem } from './modules/payment_items/entities/payment_item.entity';
 
 @Module({
   imports: [
@@ -48,6 +53,8 @@ import { Comment } from './modules/comment/entities/comment.entity';
         Chapter,
         Lesson,
         Comment,
+        Payment,
+        PaymentItem,
       ],
       synchronize: false,
       logging: false,
@@ -92,6 +99,9 @@ import { Comment } from './modules/comment/entities/comment.entity';
     ChapterModule,
     LessonModule,
     CommentModule,
+    CloudinaryModule,
+    PaymentModule,
+    PaymentItemsModule,
   ],
   controllers: [],
   providers: [],

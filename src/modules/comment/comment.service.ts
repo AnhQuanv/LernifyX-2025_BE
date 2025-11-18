@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Course } from '../course/entities/course.entity';
 import { Lesson } from '../lesson/entities/lesson.entity';
@@ -16,46 +20,78 @@ export class CommentService {
   ) {}
 
   async findByCourse(courseId: string, page = 1, limit = 5) {
-    const [data, total] = await this.commentRepository
-      .createQueryBuilder('comment')
-      .leftJoinAndSelect('comment.user', 'user')
-      .leftJoin('comment.course', 'course')
-      .where('course.id = :courseId', { courseId })
-      .orderBy('comment.createdAt', 'DESC')
-      .skip((page - 1) * limit)
-      .take(limit)
-      .getManyAndCount();
+    const course = await this.courseRepository.findOne({
+      where: { id: courseId },
+    });
+    if (!course) {
+      throw new NotFoundException({
+        errorCode: 'RESOURCE_NOT_FOUND',
+        message: 'Không tìm thấy khóa học',
+      });
+    }
 
-    return {
-      data,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
+    try {
+      const [data, total] = await this.commentRepository
+        .createQueryBuilder('comment')
+        .leftJoinAndSelect('comment.user', 'user')
+        .where('comment.course = :courseId', { courseId })
+        .orderBy('comment.createdAt', 'DESC')
+        .skip((page - 1) * limit)
+        .take(limit)
+        .getManyAndCount();
+
+      return {
+        data,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    } catch {
+      throw new InternalServerErrorException({
+        errorCode: 'DATABASE_ERROR',
+        message: 'Lỗi khi truy vấn comment theo khóa học',
+      });
+    }
   }
 
   async findByLesson(lessonId: string, page = 1, limit = 5) {
-    const [data, total] = await this.commentRepository
-      .createQueryBuilder('comment')
-      .leftJoinAndSelect('comment.user', 'user')
-      .leftJoin('comment.lesson', 'lesson')
-      .where('lesson.id = :lessonId', { lessonId })
-      .orderBy('comment.createdAt', 'DESC')
-      .skip((page - 1) * limit)
-      .take(limit)
-      .getManyAndCount();
+    const lesson = await this.lessonRepository.findOne({
+      where: { id: lessonId },
+    });
+    if (!lesson) {
+      throw new NotFoundException({
+        errorCode: 'RESOURCE_NOT_FOUND',
+        message: 'Không tìm thấy bài học',
+      });
+    }
 
-    return {
-      data,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
+    try {
+      const [data, total] = await this.commentRepository
+        .createQueryBuilder('comment')
+        .leftJoinAndSelect('comment.user', 'user')
+        .where('comment.lesson = :lessonId', { lessonId })
+        .orderBy('comment.createdAt', 'DESC')
+        .skip((page - 1) * limit)
+        .take(limit)
+        .getManyAndCount();
+
+      return {
+        data,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    } catch {
+      throw new InternalServerErrorException({
+        errorCode: 'DATABASE_ERROR',
+        message: 'Lỗi khi truy vấn comment theo bài học',
+      });
+    }
   }
 }

@@ -4,8 +4,8 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  InternalServerErrorException,
   Post,
+  Put,
   Req,
   Res,
   UnauthorizedException,
@@ -50,7 +50,7 @@ export class AuthController {
       // secure: process.env.NODE_ENV === 'production',
       secure: false,
       sameSite: 'strict',
-      path: '/v1/auth/refresh',
+      path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
     return ApiResponse.success({ accessToken, user }, 'Đăng nhập thành công');
@@ -64,13 +64,14 @@ export class AuthController {
   ): Promise<TApiResponse<LoginResponse>> {
     const oldToken = req.cookies['refresh_token'];
     if (!oldToken) {
-      throw new UnauthorizedException('Refresh token không tồn tại');
+      throw new UnauthorizedException({
+        errorCode: 'INVALID_REFRESH_TOKEN',
+        message: 'Refresh token không tồn tại',
+      });
     }
     const rawPayload = await this.authService.verifyRefreshToken(oldToken);
-    await this.authService.revokeToken(oldToken);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { exp, iat, ...payload } = rawPayload;
-    console.log('Payload: ', payload);
     const accessToken = this.authService.generateAccessToken(payload);
     const refreshToken = await this.authService.generateRefreshToken(payload);
     res.cookie('refresh_token', refreshToken, {
@@ -78,10 +79,10 @@ export class AuthController {
       // secure: process.env.NODE_ENV === 'production',
       secure: false,
       sameSite: 'strict',
-      path: '/v1/auth/refresh',
+      path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-
+    await this.authService.revokeToken(oldToken);
     return ApiResponse.success({ accessToken }, 'Làm mới token thành công');
   }
 
@@ -99,16 +100,14 @@ export class AuthController {
     }
     await this.authService.revokeToken(token);
 
-    res.clearCookie('refresh_token', { path: '/v1/auth/refresh' });
+    res.clearCookie('refresh_token', {
+      path: '/',
+      httpOnly: true,
+      secure: false,
+      sameSite: 'strict',
+    });
 
     return ApiResponse.success(null, 'Đăng xuất thành công');
-  }
-
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  @Get('me')
-  getMe(@Req() req) {
-    return 123;
   }
 
   @Post('register')
@@ -118,6 +117,31 @@ export class AuthController {
   ): Promise<TApiResponse<null>> {
     await this.authService.handleRegister(registerDto);
     return ApiResponse.success(null, 'Đăng ký thành công');
+  }
+
+  @Put('forget-password')
+  async forgetPassword(@Body('email') email: string) {
+    await this.authService.handlePasswordForget(email);
+    return ApiResponse.success(null, 'Verification code sent to email');
+  }
+
+  @Put('reset-password')
+  async resetPassword(
+    @Body()
+    body: {
+      email: string;
+      codeId: string;
+      newPassword: string;
+      confirmPassword: string;
+    },
+  ) {
+    await this.authService.handleResetPassword(
+      body.email,
+      Number(body.codeId),
+      body.newPassword,
+      body.confirmPassword,
+    );
+    return ApiResponse.success(null, 'Password has been reset successfully');
   }
 
   @Get('mail')
@@ -147,13 +171,14 @@ export class AuthController {
   @Post('verify-email')
   @HttpCode(200)
   async verifyMail(@Body() body: { email: string; codeId: number }) {
-    console.log('Body: ', body);
     await this.authService.handleVerifyMail(body.email, body.codeId);
     return ApiResponse.success(null, 'Xác thực email thành công');
   }
 
-  @Get('test-error')
-  testError() {
-    throw new InternalServerErrorException('Lỗi hệ thống giả lập');
+  @Post('send-verify-email')
+  @HttpCode(200)
+  async sendVerifyEmail(@Body('email') email: string) {
+    await this.authService.handleSendVerifyMail(email);
+    return ApiResponse.success(null, 'Gửi xác thực email thành công');
   }
 }

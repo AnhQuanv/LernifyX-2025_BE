@@ -17,6 +17,10 @@ export class UserResponseDto {
   @Expose()
   dateOfBirth: string;
   @Expose()
+  avatar: string;
+  @Expose()
+  address: string;
+  @Expose()
   @Transform(
     ({ obj }: { obj: { role?: RoleDto } }) => obj.role?.roleName ?? null,
   )
