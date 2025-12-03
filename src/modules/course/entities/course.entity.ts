@@ -30,26 +30,35 @@ export class Course {
   @Column({ name: 'learnings', type: 'json', nullable: true })
   learnings: string[];
 
-  @Column({ name: 'duration', type: 'int' })
+  @Column({ name: 'duration', type: 'int', nullable: true })
   duration: number;
 
-  @Column({ name: 'price', type: 'decimal', precision: 10, scale: 2 })
+  @Column({
+    name: 'price',
+    type: 'decimal',
+    precision: 15,
+    scale: 2,
+    nullable: true,
+  })
   price: number;
 
   @Column({
     name: 'original_price',
     type: 'decimal',
-    precision: 10,
+    precision: 15,
     scale: 2,
     nullable: true,
   })
   originalPrice: number;
 
-  @Column({ name: 'image', type: 'varchar' })
+  @Column({ name: 'image', type: 'varchar', nullable: true })
   image: string;
 
   @Column('decimal', { precision: 3, scale: 2, default: 0 })
   rating: number;
+
+  @Column('int', { default: 0 })
+  ratingCount: number;
 
   @Column('int', { default: 0 })
   students: number;

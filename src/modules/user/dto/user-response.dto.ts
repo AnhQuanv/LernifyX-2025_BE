@@ -21,6 +21,8 @@ export class UserResponseDto {
   @Expose()
   address: string;
   @Expose()
+  hasPreferences: boolean;
+  @Expose()
   @Transform(
     ({ obj }: { obj: { role?: RoleDto } }) => obj.role?.roleName ?? null,
   )

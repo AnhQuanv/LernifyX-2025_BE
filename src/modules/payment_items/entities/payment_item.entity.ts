@@ -22,7 +22,7 @@ export class PaymentItem {
   @JoinColumn({ name: 'course_id' })
   course: Course;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column('decimal', { precision: 15, scale: 2 })
   price: number;
 
   @CreateDateColumn({ type: 'timestamp' })

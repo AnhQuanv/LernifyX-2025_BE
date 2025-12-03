@@ -1,6 +1,10 @@
 import { seedRoles } from '../typeorm/seeds/role.seed';
 import { seedUsers } from '../typeorm/seeds/user.seed';
 import { dataSource } from './typeorm.config';
+import { seedLessonProgress } from '../typeorm/seeds/lesson-progress.seed';
+import { seedLessonCommentsWithRandomUsers } from '../typeorm/seeds/commentLesson.seed';
+import { seedQuiz } from '../typeorm/seeds/quiz.seed';
+import { seedUserPreferences } from '../typeorm/seeds/user-preference.seed';
 import { seedCourses } from '../typeorm/seeds/course.seed';
 
 const runSeed = async () => {
@@ -12,7 +16,10 @@ const runSeed = async () => {
     await seedUsers(dataSource);
     // await seedCategories(dataSource);
     await seedCourses(dataSource);
-
+    await seedLessonProgress(dataSource);
+    await seedLessonCommentsWithRandomUsers(dataSource);
+    await seedQuiz(dataSource);
+    await seedUserPreferences(dataSource);
     await dataSource.destroy();
     console.log('🧹 DataSource closed');
   } catch (error) {

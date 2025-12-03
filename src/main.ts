@@ -12,7 +12,7 @@ async function bootstrap() {
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
-      transform: true, // ⚠ cực kỳ quan trọng
+      transform: true,
     }),
   );
   app.useGlobalFilters(new GlobalExceptionFilter());

@@ -1,7 +1,6 @@
 import { Expose, Transform, Type } from 'class-transformer';
 import { Course } from '../entities/course.entity';
 import { ChapterDto } from '../../../modules/chapter/dto/chapter.dto';
-import { CommentDto } from '../../../modules/comment/dto/comment.dto';
 
 export class CourseDto {
   @Expose()
@@ -31,6 +30,10 @@ export class CourseDto {
   )
   @Expose()
   rating: number;
+
+  @Expose()
+  ratingCount: string;
+
   @Expose()
   students: number;
 
@@ -84,6 +87,9 @@ export class CourseDetailDto {
   @Expose()
   rating: number;
 
+  @Expose()
+  ratingCount: number;
+
   @Expose() students: number;
   @Transform(({ value }: { value?: string | null }) =>
     value ? parseFloat(value) : null,
@@ -101,6 +107,8 @@ export class CourseDetailDto {
   instructor: string;
 
   @Expose() image: string;
+  @Expose()
+  isPurchased: boolean = false;
 
   @Expose() learnings: string[];
   @Expose() requirements: string[];
@@ -109,9 +117,9 @@ export class CourseDetailDto {
   @Expose()
   chapters: ChapterDto[];
 
-  @Type(() => CommentDto)
-  @Expose()
-  comments: CommentDto[];
+  // @Type(() => CommentDto)
+  // @Expose()
+  // comments: CommentDto[];
 
   @Expose() createdAt: Date;
   @Expose() updatedAt: Date;

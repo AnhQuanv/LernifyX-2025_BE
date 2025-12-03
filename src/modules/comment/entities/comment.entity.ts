@@ -6,6 +6,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { Course } from '../../course/entities/course.entity';
@@ -24,6 +25,16 @@ export class Comment {
 
   @Column({ type: 'varchar', length: 20, default: 'lesson' })
   type: 'course' | 'lesson';
+
+  @ManyToOne(() => Comment, (comment) => comment.replies, {
+    nullable: true,
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'parent_id' })
+  parent: Comment | null;
+
+  @OneToMany(() => Comment, (comment) => comment.parent)
+  replies: Comment[];
 
   @ManyToOne(() => User, (user) => user.comments, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })

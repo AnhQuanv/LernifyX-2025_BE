@@ -15,6 +15,8 @@ import {
 } from 'typeorm';
 import { Comment } from '../../../modules/comment/entities/comment.entity';
 import { Payment } from '../../payment/entities/payment.entity';
+import { LessonProgress } from '../../../modules/lesson_progress/entities/lesson_progress.entity';
+import { UserPreference } from '../../../modules/user_preferences/entities/user_preference.entity';
 
 @Entity('user')
 export class User {
@@ -30,7 +32,7 @@ export class User {
   @Column({ type: 'varchar' })
   password: string;
 
-  @Column({ type: 'varchar' })
+  @Column({ type: 'varchar', nullable: true })
   phone: string;
 
   @Column({ name: 'date_of_birth', type: 'date', nullable: true })
@@ -50,6 +52,9 @@ export class User {
 
   @Column({ type: 'varchar', nullable: true })
   avatar: string | null;
+
+  @Column({ name: 'has_preferences', type: 'boolean', default: false })
+  hasPreferences: boolean;
 
   @ManyToOne(() => Role, (role) => role.users, { cascade: true })
   @JoinColumn({ name: 'role_id' })
@@ -72,6 +77,12 @@ export class User {
 
   @OneToMany(() => Payment, (payment) => payment.user)
   payments: Payment[];
+
+  @OneToMany(() => UserPreference, (pref) => pref.user)
+  preferences: UserPreference[];
+
+  @OneToMany(() => LessonProgress, (progress) => progress.user)
+  lessonProgress: LessonProgress[];
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;

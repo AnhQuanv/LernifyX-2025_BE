@@ -29,6 +29,16 @@ import { PaymentModule } from './modules/payment/payment.module';
 import { PaymentItemsModule } from './modules/payment_items/payment_items.module';
 import { Payment } from './modules/payment/entities/payment.entity';
 import { PaymentItem } from './modules/payment_items/entities/payment_item.entity';
+import { LessonProgressModule } from './modules/lesson_progress/lesson_progress.module';
+import { LessonProgress } from './modules/lesson_progress/entities/lesson_progress.entity';
+import { QuizQuestionModule } from './modules/quiz_question/quiz_question.module';
+import { QuizOptionModule } from './modules/quiz_option/quiz_option.module';
+import { QuizQuestion } from './modules/quiz_question/entities/quiz_question.entity';
+import { QuizOption } from './modules/quiz_option/entities/quiz_option.entity';
+import { LessonNoteModule } from './modules/lesson_note/lesson_note.module';
+import { LessonNote } from './modules/lesson_note/entities/lesson_note.entity';
+import { UserPreferencesModule } from './modules/user_preferences/user_preferences.module';
+import { UserPreference } from './modules/user_preferences/entities/user_preference.entity';
 
 @Module({
   imports: [
@@ -36,7 +46,7 @@ import { PaymentItem } from './modules/payment_items/entities/payment_item.entit
       isGlobal: true,
     }),
     TypeOrmModule.forRoot({
-      type: 'mariadb',
+      type: 'mysql',
       host: process.env.DB_HOST || 'localhost',
       port: Number(process.env.DB_PORT) || 3306,
       username: process.env.DB_USER || 'root',
@@ -55,6 +65,11 @@ import { PaymentItem } from './modules/payment_items/entities/payment_item.entit
         Comment,
         Payment,
         PaymentItem,
+        LessonProgress,
+        LessonNote,
+        QuizQuestion,
+        QuizOption,
+        UserPreference,
       ],
       synchronize: false,
       logging: false,
@@ -102,6 +117,11 @@ import { PaymentItem } from './modules/payment_items/entities/payment_item.entit
     CloudinaryModule,
     PaymentModule,
     PaymentItemsModule,
+    LessonProgressModule,
+    QuizQuestionModule,
+    QuizOptionModule,
+    LessonNoteModule,
+    UserPreferencesModule,
   ],
   controllers: [],
   providers: [],

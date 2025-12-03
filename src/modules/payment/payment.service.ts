@@ -48,7 +48,7 @@ export class PaymentService {
     });
 
     const now = new Date();
-    const expire = new Date(now.getTime() + 15 * 60 * 1000); // 15 phút
+    const expire = new Date(now.getTime() + 15 * 60 * 1000);
 
     const vnPayResponse = vnPay.buildPaymentUrl({
       vnp_Amount: payment.amount,
@@ -82,17 +82,19 @@ export class PaymentService {
       });
     }
 
-    const totalUSD = courses.reduce(
+    const total = courses.reduce(
       (sum, course) => sum + Number(course.price),
       0,
     );
 
-    const totalVND = convertUSDToVND(totalUSD);
+    const tax = Math.round(total * 0.1);
+    const totalWithTax = total + tax;
+
     const transaction_ref = `TXN-${nanoid(8).toUpperCase()}`;
     // 3. Tạo Payment
     const payment = this.paymentRepo.create({
       user: { userId },
-      amount: totalVND,
+      amount: totalWithTax,
       status: 'pending',
       gateway,
       transaction_ref: transaction_ref,
@@ -326,7 +328,8 @@ export class PaymentService {
     const orderId = payment.transaction_ref;
 
     const requestType = 'payWithMethod';
-    const amount = payment.amount.toString();
+    const amountWithTax = Math.round(payment.amount * 1.1);
+    const amount = amountWithTax.toString();
     const orderInfo = `Thanh toan MoMo cho order ${orderId}`;
     const redirectUrl = process.env.MOMO_REDIRECT_URL!;
     const ipnUrl = process.env.MOMO_IPN_URL!;
@@ -369,9 +372,6 @@ export class PaymentService {
         'https://test-payment.momo.vn/v2/gateway/api/create',
         requestBody,
       );
-
-      console.log('===== MOMO RESPONSE =====');
-      console.log(momoRes.data);
 
       const payUrl = momoRes.data.payUrl;
 
@@ -530,6 +530,7 @@ export class PaymentService {
         title: item.course.title,
         instructor: item.course.instructor.fullName,
         price: Number(item.price),
+        image: item.course.image,
       })),
     }));
 

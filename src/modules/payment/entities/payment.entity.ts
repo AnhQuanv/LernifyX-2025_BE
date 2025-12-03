@@ -20,14 +20,14 @@ export class Payment {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column('decimal', { precision: 15, scale: 2 })
   amount: number;
 
   @Column()
   status: string;
 
   @Column()
-  gateway: string; // VNPay, MoMo, ...
+  gateway: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   gateway_transaction_id: string | null;
