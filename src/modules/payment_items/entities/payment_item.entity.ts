@@ -23,7 +23,7 @@ export class PaymentItem {
   course: Course;
 
   @Column('decimal', { precision: 15, scale: 2 })
-  price: number;
+  price: number | null;
 
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;

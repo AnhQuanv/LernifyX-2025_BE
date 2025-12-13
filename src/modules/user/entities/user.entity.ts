@@ -56,6 +56,9 @@ export class User {
   @Column({ name: 'has_preferences', type: 'boolean', default: false })
   hasPreferences: boolean;
 
+  @Column({ name: 'is_new_teacher', type: 'boolean', default: false })
+  isNewTeacher: boolean;
+
   @ManyToOne(() => Role, (role) => role.users, { cascade: true })
   @JoinColumn({ name: 'role_id' })
   role: Role;

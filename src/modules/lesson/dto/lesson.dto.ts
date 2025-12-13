@@ -13,6 +13,9 @@ export class LessonDto {
   duration: number;
 
   @Expose()
+  content: string;
+
+  @Expose()
   order: number;
 
   @Type(() => LessonProgressDto)
@@ -25,6 +28,10 @@ export class LessonDto {
       !!obj.quizQuestions?.length,
   )
   hasQuiz: boolean;
+
+  @Expose()
+  @Transform(({ obj }: { obj: { videoAsset?: any } }) => !!obj.videoAsset)
+  canViewVideo: boolean;
 }
 
 export class LessonDetailDto {
@@ -35,7 +42,7 @@ export class LessonDetailDto {
   title: string;
 
   @Expose()
-  content: number;
+  content: string;
 
   @Expose()
   duration: number;

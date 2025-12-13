@@ -2,6 +2,7 @@ import { DataSource } from 'typeorm';
 import { Course } from '../../src/modules/course/entities/course.entity';
 import { QuizQuestion } from '../../src/modules/quiz_question/entities/quiz_question.entity';
 import { QuizOption } from '../../src/modules/quiz_option/entities/quiz_option.entity';
+import { v4 as uuidv4 } from 'uuid';
 
 export const seedQuiz = async (dataSource: DataSource) => {
   const courseRepo = dataSource.getRepository(Course);
@@ -101,6 +102,7 @@ export const seedQuiz = async (dataSource: DataSource) => {
         const q = sampleQuizzes[i];
 
         const question = questionRepo.create({
+          id: uuidv4(),
           question: q.question,
           lesson,
           order: i + 1,
@@ -111,6 +113,7 @@ export const seedQuiz = async (dataSource: DataSource) => {
           q.options.map((opt) =>
             optionRepo.save(
               optionRepo.create({
+                id: uuidv4(),
                 text: opt,
                 question: savedQuestion,
               }),

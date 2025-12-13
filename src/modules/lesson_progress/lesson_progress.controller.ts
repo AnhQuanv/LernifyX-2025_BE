@@ -18,7 +18,6 @@ export class LessonProgressController {
     @Req() req: RequestWithUser,
   ) {
     const userId = req.user.sub;
-    console.log('lessonId', lessonId);
     const progress =
       await this.lessonProgressService.handleCreateLessonProgress(
         userId,

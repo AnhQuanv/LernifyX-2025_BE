@@ -18,7 +18,11 @@ async function bootstrap() {
   app.useGlobalFilters(new GlobalExceptionFilter());
   app.use(cookieParser());
   app.enableCors({
-    origin: ['http://localhost:3000', 'http://192.168.11.1:3000'],
+    origin: [
+      'http://localhost:3000',
+      'http://192.168.11.1:3000',
+      process.env.CLIENT_URL,
+    ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });

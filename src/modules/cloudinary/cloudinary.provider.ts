@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { v2 as cloudinary } from 'cloudinary';
 
 export const CloudinaryProvider = {
@@ -10,6 +7,7 @@ export const CloudinaryProvider = {
       cloud_name: process.env.CLOUD_NAME,
       api_key: process.env.CLOUD_API_KEY,
       api_secret: process.env.CLOUD_API_SECRET,
+      secure: true,
     });
     return cloudinary;
   },

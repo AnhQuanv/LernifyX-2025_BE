@@ -32,6 +32,7 @@ export class AuthService {
   ) {}
 
   async handleLogin(authRequestDto: AuthRequestDto) {
+    console.log('auth: ', authRequestDto);
     const userRes = await this.validateUser(
       authRequestDto.email,
       authRequestDto.password,
@@ -195,6 +196,11 @@ export class AuthService {
       codeId,
       codeExpiresAt: codeExpiresAt.toDate(),
     });
+
+    if (registerDto.roleName === 'teacher') {
+      newUser.isNewTeacher = true;
+    }
+
     const savedUser = await this.userRepository.save(newUser);
     await this.mailerService.sendMail({
       to: savedUser.email,

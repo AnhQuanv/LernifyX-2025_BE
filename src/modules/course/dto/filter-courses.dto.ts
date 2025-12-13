@@ -7,3 +7,11 @@ export class FilterCoursesDto {
   limit?: number;
   search?: string;
 }
+
+export interface TeacherCourseFilterDto {
+  status?: string;
+  search?: string;
+  sortBy?: string;
+  page?: number;
+  limit?: number;
+}

@@ -1,20 +1,20 @@
 import { QuizQuestion } from '../../../modules/quiz_question/entities/quiz_question.entity';
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
   ManyToOne,
   JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  PrimaryColumn,
 } from 'typeorm';
 
 @Entity('quiz_option')
 export class QuizOption {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn('uuid')
   id: string;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', nullable: true })
   text: string;
 
   @ManyToOne(() => QuizQuestion, (question) => question.options, {

@@ -6,6 +6,9 @@ import { Chapter } from '../../src/modules/chapter/entities/chapter.entity';
 import { Lesson } from '../../src/modules/lesson/entities/lesson.entity';
 import { Comment } from '../../src/modules/comment/entities/comment.entity';
 import { Role } from '../../src/modules/role/entities/role.entity';
+import { v4 as uuidv4 } from 'uuid';
+import { LessonVideo } from '../../src/modules/lesson_video/entities/lesson_video.entity';
+import * as bcrypt from 'bcrypt';
 
 export const seedCourses = async (dataSource: DataSource) => {
   const courseRepo = dataSource.getRepository(Course);
@@ -13,52 +16,22 @@ export const seedCourses = async (dataSource: DataSource) => {
   const userRepo = dataSource.getRepository(User);
   const chapterRepo = dataSource.getRepository(Chapter);
   const lessonRepo = dataSource.getRepository(Lesson);
+  const lessonVideoRepo = dataSource.getRepository(LessonVideo);
   const commentRepo = dataSource.getRepository(Comment);
   const roleRepo = dataSource.getRepository(Role);
 
   const studentRole = await roleRepo.findOneBy({ roleName: 'student' });
   const teacherRole = await roleRepo.findOneBy({ roleName: 'teacher' });
 
-  // const createLessonContent = (
-  //   courseTitle: string,
-  //   chapterTitle: string,
-  //   lessonTitle: string,
-  // ) => {
-  //   const lessonNumberMatch = lessonTitle.match(/\d+$/);
-  //   const lessonNumber = lessonNumberMatch ? lessonNumberMatch[0] : '';
-
-  //   return {
-  //     content: `Bài học ${lessonTitle} (Chương: ${chapterTitle}) giới thiệu Khái niệm chủ chốt số ${lessonNumber} liên quan đến ${courseTitle}.`,
-  //   };
-  // };
-
   const sampleImageUrl =
     'https://res.cloudinary.com/drc4b7rmj/image/upload/v1764497628/Avatar/banh_1764497623330.jpg';
-  const sampleVideoUrl =
+  const sampleOriginalUrl =
     'https://res.cloudinary.com/drc4b7rmj/video/upload/v1763726091/h4ogqnwmsshbvfneixkv.mp4';
-
+  const samplePublicIdBase = 'Courses/Videos/sample_lesson_video';
+  const sampleDuration = 600;
+  const sampleWidth = 1280;
+  const sampleHeight = 720;
   const coursesData = [
-    {
-      title: 'Khóa Học Phát Triển Toàn Diện React & Redux',
-      categoryName: 'Lập Trình Web',
-      instructorName: 'Nguyễn Văn An',
-      level: 'Trung Cấp',
-      duration: 3600 * 45,
-      price: 1899000,
-      originalPrice: 3799000,
-      discount: 50,
-      discountExpiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-      description:
-        'Thành thạo React từ cơ bản đến nâng cao với các dự án thực tế và Redux Toolkit.',
-      learnings: [
-        'Cấu trúc cơ bản của React và JSX',
-        'Sử dụng Hooks và Context API hiệu quả',
-        'Quản lý State với Redux Toolkit',
-        'Xây dựng Routing và triển khai ứng dụng',
-      ],
-      requirements: ['Kiến thức cơ bản về HTML/CSS', 'Nắm vững JavaScript ES6'],
-      image: sampleImageUrl,
-    },
     {
       title: 'Masterclass Lập Trình Backend với Node.js & Express',
       categoryName: 'Lập Trình Backend',
@@ -308,30 +281,6 @@ export const seedCourses = async (dataSource: DataSource) => {
       image: sampleImageUrl,
     },
     {
-      title: 'Xây Dựng Ứng Dụng Tương Tác Cao với Vue.js 3',
-      categoryName: 'Lập Trình Web',
-      instructorName: 'Nguyễn Văn An',
-      level: 'Trung Cấp',
-      duration: 3600 * 30,
-      price: 1599000,
-      originalPrice: 2599000,
-      discount: 38,
-      discountExpiresAt: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
-      description:
-        'Nắm vững Framework Vue.js 3, Composition API và xây dựng các ứng dụng đơn trang (SPA) hiệu suất cao.',
-      learnings: [
-        'Vue.js 3 Fundamentals',
-        'Composition API và Pinia State Management',
-        'Vue Router và Quản lý Form',
-        'Tối ưu hóa hiệu suất và Deployment',
-      ],
-      requirements: [
-        'HTML, CSS, JavaScript ES6',
-        'Cơ bản về Vue.js 2 (tùy chọn)',
-      ],
-      image: sampleImageUrl,
-    },
-    {
       title: 'Phân Tích Thống Kê và Mô Hình Hóa với R',
       categoryName: 'Khoa Học Dữ Liệu',
       instructorName: 'Lê Hoàng Minh',
@@ -546,27 +495,6 @@ export const seedCourses = async (dataSource: DataSource) => {
       image: sampleImageUrl,
     },
     {
-      title: 'Lập Trình Web Cơ Bản: HTML5, CSS3 và JavaScript ES6',
-      categoryName: 'Lập Trình Web',
-      instructorName: 'Nguyễn Văn An',
-      level: 'Cơ Bản',
-      duration: 3600 * 50,
-      price: 1699000,
-      originalPrice: 3200000,
-      discount: 47,
-      discountExpiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-      description:
-        'Nền tảng vững chắc để bắt đầu sự nghiệp lập trình web, tạo giao diện và logic cơ bản.',
-      learnings: [
-        'Xây dựng cấu trúc với HTML5',
-        'Thiết kế giao diện đẹp với CSS3 (Flexbox, Grid)',
-        'Lập trình tương tác với JavaScript ES6',
-        'Dự án website tĩnh đầu tiên',
-      ],
-      requirements: ['Không yêu cầu kinh nghiệm'],
-      image: sampleImageUrl,
-    },
-    {
       title: 'Quản Trị Hệ Thống Mạng và Linux',
       categoryName: 'An Toàn Thông Tin',
       instructorName: 'Hoàng Kim Chi',
@@ -673,90 +601,6 @@ export const seedCourses = async (dataSource: DataSource) => {
     },
 
     {
-      title: 'Fullstack Next.js 14 & Prisma: Xây Dựng Ứng Dụng E-commerce',
-      categoryName: 'Lập Trình Web',
-      instructorName: 'Nguyễn Văn An',
-      level: 'Nâng Cao',
-      duration: 3600 * 50,
-      price: 2599000,
-      originalPrice: 4200000,
-      discount: 38,
-      discountExpiresAt: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000),
-      description:
-        'Học cách xây dựng ứng dụng Fullstack hiện đại với Next.js App Router, TypeScript, Tailwind CSS và Prisma ORM.',
-      learnings: [
-        'Sử dụng Next.js App Router và Server Components',
-        'Quản lý cơ sở dữ liệu với Prisma và PostgreSQL',
-        'Xử lý xác thực (Authentication) với NextAuth',
-        'Triển khai (Deployment) lên Vercel',
-      ],
-      requirements: ['Kinh nghiệm cơ bản với React và Node.js'],
-      image: sampleImageUrl,
-    },
-    {
-      title: 'Thành Thạo TypeScript: Từ Zero đến Chuyên Sâu',
-      categoryName: 'Lập Trình Web',
-      instructorName: 'Nguyễn Văn An',
-      level: 'Trung Cấp',
-      duration: 3600 * 20,
-      price: 1099000,
-      originalPrice: 1999000,
-      discount: 45,
-      discountExpiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-      description:
-        'Chuyển đổi các dự án JavaScript sang TypeScript để tăng cường khả năng bảo trì và giảm lỗi runtime.',
-      learnings: [
-        'Type Primitives và Type Inference',
-        'Sử dụng Generics và Utility Types nâng cao',
-        'Làm việc với Classes, Interfaces và Type Aliases',
-        'Cấu hình tsconfig.json và Tích hợp vào dự án React/Node',
-      ],
-      requirements: ['Nắm vững JavaScript ES6'],
-      image: sampleImageUrl,
-    },
-    {
-      title: 'Xây Dựng API Hiệu Suất Cao với Go (Golang) và Gin Framework',
-      categoryName: 'Lập Trình Backend',
-      instructorName: 'Trần Thị Mai',
-      level: 'Nâng Cao',
-      duration: 3600 * 35,
-      price: 2199000,
-      originalPrice: 2199000,
-      discount: 0,
-      discountExpiresAt: null,
-      description:
-        'Học ngôn ngữ Go và cách sử dụng Gin Framework để xây dựng các microservices và API tốc độ cao.',
-      learnings: [
-        'Cơ bản về Go Syntax và Concurrency (Goroutines)',
-        'Thiết kế RESTful API với Gin',
-        'Xử lý Cơ sở dữ liệu (SQL/NoSQL) trong Go',
-        'Testing và Triển khai dịch vụ Go',
-      ],
-      requirements: ['Kinh nghiệm lập trình Backend'],
-      image: sampleImageUrl,
-    },
-    {
-      title: 'Lập Trình Frontend Nâng Cao với Svelte và SvelteKit',
-      categoryName: 'Lập Trình Web',
-      instructorName: 'Nguyễn Văn An',
-      level: 'Trung Cấp',
-      duration: 3600 * 28,
-      price: 1699000,
-      originalPrice: 2800000,
-      discount: 39,
-      discountExpiresAt: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000),
-      description:
-        'Học Framework Svelte thế hệ mới, tối ưu hóa hiệu suất ứng dụng web bằng cách loại bỏ Virtual DOM.',
-      learnings: [
-        'Cơ bản về Svelte Component và Reactivity',
-        'Sử dụng SvelteKit cho Server-Side Rendering (SSR)',
-        'Quản lý State và Routing trong SvelteKit',
-        'Xây dựng một dự án thực tế với SvelteKit',
-      ],
-      requirements: ['Kiến thức HTML, CSS, JavaScript cơ bản'],
-      image: sampleImageUrl,
-    },
-    {
       title: 'Cơ Sở Dữ Liệu SQL Nâng Cao: Tối Ưu Hóa và Tuning',
       categoryName: 'Cơ Sở Dữ Liệu',
       instructorName: 'Trần Văn Tùng',
@@ -797,48 +641,6 @@ export const seedCourses = async (dataSource: DataSource) => {
         'Giám sát và Logging trong kiến trúc Microservices',
       ],
       requirements: ['Thành thạo Node.js/Express'],
-      image: sampleImageUrl,
-    },
-    {
-      title: 'Lập Trình Web Socket Thời Gian Thực với Socket.IO và React',
-      categoryName: 'Lập Trình Web',
-      instructorName: 'Nguyễn Văn An',
-      level: 'Trung Cấp',
-      duration: 3600 * 20,
-      price: 1299000,
-      originalPrice: 2000000,
-      discount: 35,
-      discountExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      description:
-        'Xây dựng các ứng dụng chat, thông báo theo thời gian thực (real-time) bằng Socket.IO và tích hợp vào React.',
-      learnings: [
-        'Cơ bản về Web Sockets và Long Polling',
-        'Thiết lập Socket.IO Server (Node.js) và Client (React)',
-        'Xây dựng ứng dụng Chat Group',
-        'Xử lý Disconnect và Tái kết nối',
-      ],
-      requirements: ['Kinh nghiệm cơ bản với React và Node.js'],
-      image: sampleImageUrl,
-    },
-    {
-      title: 'Performance Optimization: Tối Ưu Hóa Tốc Độ Website Frontend',
-      categoryName: 'Lập Trình Web',
-      instructorName: 'Nguyễn Văn An',
-      level: 'Nâng Cao',
-      duration: 3600 * 25,
-      price: 1599000,
-      originalPrice: 1599000,
-      discount: 0,
-      discountExpiresAt: null,
-      description:
-        'Làm chủ các kỹ thuật tối ưu hóa để đạt điểm Core Web Vitals cao và tăng tốc độ tải trang.',
-      learnings: [
-        'Phân tích hiệu suất với Lighthouse và WebPageTest',
-        'Tối ưu hóa hình ảnh và Lazy Loading',
-        'Code Splitting và Tree Shaking',
-        'Caching và Service Worker',
-      ],
-      requirements: ['Thành thạo JavaScript và một Framework (React/Vue)'],
       image: sampleImageUrl,
     },
 
@@ -1268,28 +1070,7 @@ export const seedCourses = async (dataSource: DataSource) => {
       requirements: ['Cơ bản về HTML/CSS', 'Quan tâm đến UI/UX'],
       image: sampleImageUrl,
     },
-    {
-      title:
-        'Xây Dựng Framework/Thư Viện Frontend từ Đầu bằng Vanilla JavaScript',
-      categoryName: 'Lập Trình Web',
-      instructorName: 'Nguyễn Văn An',
-      level: 'Nâng Cao',
-      duration: 3600 * 35,
-      price: 2199000,
-      originalPrice: 2199000,
-      discount: 0,
-      discountExpiresAt: null,
-      description:
-        'Đi sâu vào cơ chế hoạt động của các framework (Virtual DOM, Reactivity) bằng cách tự xây dựng phiên bản đơn giản.',
-      learnings: [
-        'Hiểu cơ chế Virtual DOM và Reconciliation',
-        'Xây dựng hệ thống Component cơ bản',
-        'Quản lý State theo cơ chế Observer Pattern',
-        'Tối ưu hóa Performance của Rendering',
-      ],
-      requirements: ['Thành thạo JavaScript ES6+'],
-      image: sampleImageUrl,
-    },
+
     {
       title: 'Lập Trình Web với Rust và Actix Web Framework',
       categoryName: 'Lập Trình Backend',
@@ -1422,8 +1203,6 @@ export const seedCourses = async (dataSource: DataSource) => {
       requirements: ['Kinh nghiệm lập trình cơ bản', 'Cơ bản về AWS'],
       image: sampleImageUrl,
     },
-
-    // --- BỔ SUNG KHÓA HỌC MỚI (Cơ Sở Dữ Liệu) ---
     {
       title: 'Tối Ưu Hóa PostgreSQL: Scaling và Performance Tuning',
       categoryName: 'Cơ Sở Dữ Liệu',
@@ -1488,8 +1267,6 @@ export const seedCourses = async (dataSource: DataSource) => {
       requirements: ['Kinh nghiệm làm việc với dữ liệu JSON'],
       image: sampleImageUrl,
     },
-
-    // --- BỔ SUNG KHÓA HỌC MỚI (Kỹ Năng & Thiết Kế liên quan đến Lập Trình) ---
     {
       title: 'Git Nâng Cao và Quản Lý Version Control Cho Dự Án Lớn',
       categoryName: 'Lập Trình Web',
@@ -1553,8 +1330,6 @@ export const seedCourses = async (dataSource: DataSource) => {
       requirements: ['Cơ bản về UI/UX'],
       image: sampleImageUrl,
     },
-
-    // --- BỔ SUNG KHÓA HỌC KHÁC (Đa dạng hóa) ---
     {
       title: 'Phát Triển Ứng Dụng Đa Nền Tảng với React Native và Expo',
       categoryName: 'Lập Trình Di Động',
@@ -1682,27 +1457,6 @@ export const seedCourses = async (dataSource: DataSource) => {
       image: sampleImageUrl,
     },
     {
-      title: 'Lập Trình Front-end Chuyên Sâu với Webpack và Bundling',
-      categoryName: 'Lập Trình Web',
-      instructorName: 'Nguyễn Văn An',
-      level: 'Nâng Cao',
-      duration: 3600 * 20,
-      price: 1399000,
-      originalPrice: 2299000,
-      discount: 39,
-      discountExpiresAt: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000),
-      description:
-        'Nắm vững các công cụ Bundling (Webpack, Rollup, Vite) để quản lý tài nguyên, tối ưu hóa kích thước và tốc độ tải ứng dụng.',
-      learnings: [
-        'Cấu hình Webpack từ đầu (Loaders, Plugins)',
-        'Sử dụng Code Splitting và Lazy Loading',
-        'Tối ưu hóa Tree Shaking và Minification',
-        'So sánh Webpack vs Vite và chọn công cụ phù hợp',
-      ],
-      requirements: ['Thành thạo JavaScript Modules'],
-      image: sampleImageUrl,
-    },
-    {
       title: 'Kỹ Năng Hợp Tác và Giải Quyết Mâu Thuẫn trong Đội Nhóm Lập Trình',
       categoryName: 'Kỹ Năng Mềm',
       instructorName: 'Lê Huyền Trang',
@@ -1723,7 +1477,247 @@ export const seedCourses = async (dataSource: DataSource) => {
       requirements: ['Kinh nghiệm làm việc nhóm (tùy chọn)'],
       image: sampleImageUrl,
     },
+    // -------------------------------------------
+    {
+      title: 'Khóa Học Phát Triển Toàn Diện React & Redux',
+      categoryName: 'Lập Trình Web',
+      instructorName: 'Nguyễn Văn An',
+      level: 'Trung Cấp',
+      duration: 3600 * 45,
+      price: 1000000,
+      originalPrice: 1000000,
+      discount: 0,
+      discountExpiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+      description:
+        'Thành thạo React từ cơ bản đến nâng cao với các dự án thực tế và Redux Toolkit.',
+      learnings: [
+        'Cấu trúc cơ bản của React và JSX',
+        'Sử dụng Hooks và Context API hiệu quả',
+        'Quản lý State với Redux Toolkit',
+        'Xây dựng Routing và triển khai ứng dụng',
+      ],
+      requirements: ['Kiến thức cơ bản về HTML/CSS', 'Nắm vững JavaScript ES6'],
+      image: sampleImageUrl,
+    },
+    {
+      title: 'Xây Dựng Ứng Dụng Tương Tác Cao với Vue.js 3',
+      categoryName: 'Lập Trình Web',
+      instructorName: 'Nguyễn Văn An',
+      level: 'Trung Cấp',
+      duration: 3600 * 30,
+      price: 1000000,
+      originalPrice: 1000000,
+      discount: 0,
+      discountExpiresAt: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
+      description:
+        'Nắm vững Framework Vue.js 3, Composition API và xây dựng các ứng dụng đơn trang (SPA) hiệu suất cao.',
+      learnings: [
+        'Vue.js 3 Fundamentals',
+        'Composition API và Pinia State Management',
+        'Vue Router và Quản lý Form',
+        'Tối ưu hóa hiệu suất và Deployment',
+      ],
+      requirements: [
+        'HTML, CSS, JavaScript ES6',
+        'Cơ bản về Vue.js 2 (tùy chọn)',
+      ],
+      image: sampleImageUrl,
+    },
+    {
+      title: 'Lập Trình Web Cơ Bản: HTML5, CSS3 và JavaScript ES6',
+      categoryName: 'Lập Trình Web',
+      instructorName: 'Nguyễn Văn An',
+      level: 'Cơ Bản',
+      duration: 3600 * 50,
+      price: 1000000,
+      originalPrice: 1000000,
+      discount: 0,
+      discountExpiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      description:
+        'Nền tảng vững chắc để bắt đầu sự nghiệp lập trình web, tạo giao diện và logic cơ bản.',
+      learnings: [
+        'Xây dựng cấu trúc với HTML5',
+        'Thiết kế giao diện đẹp với CSS3 (Flexbox, Grid)',
+        'Lập trình tương tác với JavaScript ES6',
+        'Dự án website tĩnh đầu tiên',
+      ],
+      requirements: ['Không yêu cầu kinh nghiệm'],
+      image: sampleImageUrl,
+    },
+    {
+      title: 'Fullstack Next.js 14 & Prisma: Xây Dựng Ứng Dụng E-commerce',
+      categoryName: 'Lập Trình Web',
+      instructorName: 'Nguyễn Văn An',
+      level: 'Nâng Cao',
+      duration: 3600 * 50,
+      price: 1000000,
+      originalPrice: 2000000,
+      discount: 50,
+      discountExpiresAt: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000),
+      description:
+        'Học cách xây dựng ứng dụng Fullstack hiện đại với Next.js App Router, TypeScript, Tailwind CSS và Prisma ORM.',
+      learnings: [
+        'Sử dụng Next.js App Router và Server Components',
+        'Quản lý cơ sở dữ liệu với Prisma và PostgreSQL',
+        'Xử lý xác thực (Authentication) với NextAuth',
+        'Triển khai (Deployment) lên Vercel',
+      ],
+      requirements: ['Kinh nghiệm cơ bản với React và Node.js'],
+      image: sampleImageUrl,
+    },
+    {
+      title: 'Thành Thạo TypeScript: Từ Zero đến Chuyên Sâu',
+      categoryName: 'Lập Trình Web',
+      instructorName: 'Nguyễn Văn An',
+      level: 'Trung Cấp',
+      duration: 3600 * 20,
+      price: 1099000,
+      originalPrice: 1999000,
+      discount: 45,
+      discountExpiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+      description:
+        'Chuyển đổi các dự án JavaScript sang TypeScript để tăng cường khả năng bảo trì và giảm lỗi runtime.',
+      learnings: [
+        'Type Primitives và Type Inference',
+        'Sử dụng Generics và Utility Types nâng cao',
+        'Làm việc với Classes, Interfaces và Type Aliases',
+        'Cấu hình tsconfig.json và Tích hợp vào dự án React/Node',
+      ],
+      requirements: ['Nắm vững JavaScript ES6'],
+      image: sampleImageUrl,
+    },
+    {
+      title: 'Xây Dựng API Hiệu Suất Cao với Go (Golang) và Gin Framework',
+      categoryName: 'Lập Trình Backend',
+      instructorName: 'Trần Thị Mai',
+      level: 'Nâng Cao',
+      duration: 3600 * 35,
+      price: 2199000,
+      originalPrice: 2199000,
+      discount: 0,
+      discountExpiresAt: null,
+      description:
+        'Học ngôn ngữ Go và cách sử dụng Gin Framework để xây dựng các microservices và API tốc độ cao.',
+      learnings: [
+        'Cơ bản về Go Syntax và Concurrency (Goroutines)',
+        'Thiết kế RESTful API với Gin',
+        'Xử lý Cơ sở dữ liệu (SQL/NoSQL) trong Go',
+        'Testing và Triển khai dịch vụ Go',
+      ],
+      requirements: ['Kinh nghiệm lập trình Backend'],
+      image: sampleImageUrl,
+    },
+    {
+      title: 'Lập Trình Frontend Nâng Cao với Svelte và SvelteKit',
+      categoryName: 'Lập Trình Web',
+      instructorName: 'Nguyễn Văn An',
+      level: 'Trung Cấp',
+      duration: 3600 * 28,
+      price: 1699000,
+      originalPrice: 2800000,
+      discount: 39,
+      discountExpiresAt: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000),
+      description:
+        'Học Framework Svelte thế hệ mới, tối ưu hóa hiệu suất ứng dụng web bằng cách loại bỏ Virtual DOM.',
+      learnings: [
+        'Cơ bản về Svelte Component và Reactivity',
+        'Sử dụng SvelteKit cho Server-Side Rendering (SSR)',
+        'Quản lý State và Routing trong SvelteKit',
+        'Xây dựng một dự án thực tế với SvelteKit',
+      ],
+      requirements: ['Kiến thức HTML, CSS, JavaScript cơ bản'],
+      image: sampleImageUrl,
+    },
+    {
+      title: 'Lập Trình Web Socket Thời Gian Thực với Socket.IO và React',
+      categoryName: 'Lập Trình Web',
+      instructorName: 'Nguyễn Văn An',
+      level: 'Trung Cấp',
+      duration: 3600 * 20,
+      price: 1299000,
+      originalPrice: 2000000,
+      discount: 35,
+      discountExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      description:
+        'Xây dựng các ứng dụng chat, thông báo theo thời gian thực (real-time) bằng Socket.IO và tích hợp vào React.',
+      learnings: [
+        'Cơ bản về Web Sockets và Long Polling',
+        'Thiết lập Socket.IO Server (Node.js) và Client (React)',
+        'Xây dựng ứng dụng Chat Group',
+        'Xử lý Disconnect và Tái kết nối',
+      ],
+      requirements: ['Kinh nghiệm cơ bản với React và Node.js'],
+      image: sampleImageUrl,
+    },
+    {
+      title: 'Performance Optimization: Tối Ưu Hóa Tốc Độ Website Frontend',
+      categoryName: 'Lập Trình Web',
+      instructorName: 'Nguyễn Văn An',
+      level: 'Nâng Cao',
+      duration: 3600 * 25,
+      price: 1000000,
+      originalPrice: 1000000,
+      discount: 0,
+      discountExpiresAt: null,
+      description:
+        'Làm chủ các kỹ thuật tối ưu hóa để đạt điểm Core Web Vitals cao và tăng tốc độ tải trang.',
+      learnings: [
+        'Phân tích hiệu suất với Lighthouse và WebPageTest',
+        'Tối ưu hóa hình ảnh và Lazy Loading',
+        'Code Splitting và Tree Shaking',
+        'Caching và Service Worker',
+      ],
+      requirements: ['Thành thạo JavaScript và một Framework (React/Vue)'],
+      image: sampleImageUrl,
+    },
+    {
+      title:
+        'Xây Dựng Framework/Thư Viện Frontend từ Đầu bằng Vanilla JavaScript',
+      categoryName: 'Lập Trình Web',
+      instructorName: 'Nguyễn Văn An',
+      level: 'Nâng Cao',
+      duration: 3600 * 35,
+      price: 2199000,
+      originalPrice: 2199000,
+      discount: 0,
+      discountExpiresAt: null,
+      description:
+        'Đi sâu vào cơ chế hoạt động của các framework (Virtual DOM, Reactivity) bằng cách tự xây dựng phiên bản đơn giản.',
+      learnings: [
+        'Hiểu cơ chế Virtual DOM và Reconciliation',
+        'Xây dựng hệ thống Component cơ bản',
+        'Quản lý State theo cơ chế Observer Pattern',
+        'Tối ưu hóa Performance của Rendering',
+      ],
+      requirements: ['Thành thạo JavaScript ES6+'],
+      image: sampleImageUrl,
+    },
+    {
+      title: 'Lập Trình Front-end Chuyên Sâu với Webpack và Bundling',
+      categoryName: 'Lập Trình Web',
+      instructorName: 'Nguyễn Văn An',
+      level: 'Nâng Cao',
+      duration: 3600 * 20,
+      price: 1399000,
+      originalPrice: 2299000,
+      discount: 39,
+      discountExpiresAt: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000),
+      description:
+        'Nắm vững các công cụ Bundling (Webpack, Rollup, Vite) để quản lý tài nguyên, tối ưu hóa kích thước và tốc độ tải ứng dụng.',
+      learnings: [
+        'Cấu hình Webpack từ đầu (Loaders, Plugins)',
+        'Sử dụng Code Splitting và Lazy Loading',
+        'Tối ưu hóa Tree Shaking và Minification',
+        'So sánh Webpack vs Vite và chọn công cụ phù hợp',
+      ],
+      requirements: ['Thành thạo JavaScript Modules'],
+      image: sampleImageUrl,
+    },
   ];
+
+  const randomDaysAgo = Math.floor(Math.random() * 365);
+  const createdAt = new Date();
+  createdAt.setDate(createdAt.getDate() - randomDaysAgo);
 
   for (const data of coursesData) {
     // Category
@@ -1742,12 +1736,12 @@ export const seedCourses = async (dataSource: DataSource) => {
       const emailName = data.instructorName
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
-        .replace(/\s+/g, '.')
+        .replace(/\s+/g, '')
         .toLowerCase();
 
       instructor = userRepo.create({
         fullName: data.instructorName,
-        email: `${emailName}@giedu.com`,
+        email: `${emailName}@example.com`,
         password: '123456',
         phone: '09' + Math.floor(Math.random() * 900000000 + 100000000),
         dateOfBirth: '1990-01-01',
@@ -1757,7 +1751,7 @@ export const seedCourses = async (dataSource: DataSource) => {
       });
       await userRepo.save(instructor);
     }
-
+    const hashedPassword = await bcrypt.hash('123456', 10);
     const course = courseRepo.create({
       title: data.title,
       description: data.description,
@@ -1776,11 +1770,14 @@ export const seedCourses = async (dataSource: DataSource) => {
       status: 'published',
       category,
       instructor,
+      createdAt,
+      updatedAt: createdAt,
     } as DeepPartial<Course>);
     await courseRepo.save(course);
-
+    const seederTimestamp = Date.now();
     for (let i = 1; i <= 3; i++) {
       const chapter = chapterRepo.create({
+        id: uuidv4(),
         title: `Chương ${i}: Giới thiệu và Các khái niệm cơ bản (Phần ${i})`,
         order: i,
         course,
@@ -1789,17 +1786,27 @@ export const seedCourses = async (dataSource: DataSource) => {
 
       for (let j = 1; j <= 3; j++) {
         const lesson = lessonRepo.create({
+          id: uuidv4(),
           title: `Bài học ${j}: Khái niệm chủ chốt số ${j}`,
           content: `Nội dung bài học ${j} của chương ${i} trong khóa ${course.title}`,
           duration: Math.floor(Math.random() * 12) + 5,
           order: j,
           chapter,
-          videoUrl: sampleVideoUrl,
         });
         await lessonRepo.save(lesson);
+
+        const videoAsset = lessonVideoRepo.create({
+          lesson: lesson,
+          publicId: `${samplePublicIdBase}_chapter${i}_lesson${j}_${seederTimestamp}`,
+          originalUrl: sampleOriginalUrl,
+          duration: sampleDuration,
+          widthOriginal: sampleWidth,
+          heightOriginal: sampleHeight,
+        });
+
+        await lessonVideoRepo.save(videoAsset);
       }
     }
-
     const reviewers = ['Hoàng Thị Bích', 'Phan Văn Cường', 'Đỗ Mai Hoa'];
     for (const name of reviewers) {
       let reviewer = await userRepo.findOne({ where: { fullName: name } });
@@ -1813,7 +1820,7 @@ export const seedCourses = async (dataSource: DataSource) => {
         reviewer = userRepo.create({
           fullName: name,
           email: `${emailName}@student.com`,
-          password: '123456',
+          password: hashedPassword,
           phone: '09' + Math.floor(Math.random() * 900000000 + 100000000),
           dateOfBirth: '1995-01-01',
           address: 'TP. Hồ Chí Minh, Việt Nam',

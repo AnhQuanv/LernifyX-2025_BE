@@ -89,6 +89,15 @@ export class PaymentController {
     return await this.paymentService.handleMoMoReturn(query, res);
   }
 
+  @Get('teacher-payment')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('teacher')
+  async getTeacherPayments(@Req() req: RequestWithUser) {
+    const userId = req.user?.sub;
+    const result = await this.paymentService.handelGetTeacherPayments(userId);
+    return ApiResponse.success(result, 'Lấy doanh thu hàng tháng thành công');
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('student')

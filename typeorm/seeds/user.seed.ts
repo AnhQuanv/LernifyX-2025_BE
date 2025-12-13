@@ -7,7 +7,6 @@ export const seedUsers = async (dataSource: DataSource) => {
   const userRepo = dataSource.getRepository(User);
   const roleRepo = dataSource.getRepository(Role);
 
-  // Lấy các role từ DB
   const adminRole = await roleRepo.findOneBy({ roleName: 'admin' });
   const studentRole = await roleRepo.findOneBy({ roleName: 'student' });
   const teacherRole = await roleRepo.findOneBy({ roleName: 'teacher' });
@@ -36,7 +35,7 @@ export const seedUsers = async (dataSource: DataSource) => {
       role: studentRole,
     },
     {
-      fullName: 'Lê Văn C',
+      fullName: 'Nguyễn Văn B',
       email: 'c@example.com',
       password: '123456',
       phone: '0923456789',
@@ -49,12 +48,14 @@ export const seedUsers = async (dataSource: DataSource) => {
   for (const user of plainUsers) {
     const existing = await userRepo.findOneBy({ email: user.email });
     if (!existing) {
-      const hashedPassword = await bcrypt.hash(user.password, 10); // 👈 Mã hóa mật khẩu
+      const hashedPassword = await bcrypt.hash(user.password, 10);
       const userToSave = userRepo.create({
         ...user,
         password: hashedPassword,
       });
-
+      if (user.role.roleName === 'teacher') {
+        userToSave.isNewTeacher = true;
+      }
       await userRepo.save(userToSave);
     }
   }

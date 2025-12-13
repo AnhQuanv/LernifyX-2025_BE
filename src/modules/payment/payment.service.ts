@@ -26,6 +26,16 @@ import { nanoid } from 'nanoid';
 import { Wishlist } from '../wishlist/entities/wishlist.entity';
 import { CartItem } from '../cart_item/entities/cart_item.entity';
 
+interface MonthlyRevenueResult {
+  monthYear: string;
+  totalNetRevenue: string;
+}
+
+export interface MonthlyRevenueData {
+  name: string;
+  revenue: number;
+}
+const PLATFORM_FEE_RATE = 0.1;
 @Injectable()
 export class PaymentService {
   constructor(
@@ -383,12 +393,17 @@ export class PaymentService {
         paymentId: payment.id,
       };
     } catch (error) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unnecessary-type-assertion
       const axiosError = error as any;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (axiosError && axiosError.isAxiosError && axiosError.response) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         console.error('LỖI CHI TIẾT MO_MO:', error.response.data);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         console.error('STATUS:', error.response.status);
 
         // Ném lỗi chi tiết ra ngoài
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
         throw new HttpException(error.response.data, error.response.status);
       }
       // Ném lỗi Axios ban đầu nếu không phải lỗi 400 từ MoMo
@@ -543,5 +558,88 @@ export class PaymentService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  private initializeRevenueArray(count: number): MonthlyRevenueData[] {
+    const data: MonthlyRevenueData[] = [];
+    const today = new Date();
+
+    for (let i = count - 1; i >= 0; i--) {
+      const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const month = date.getMonth() + 1;
+      const year = date.getFullYear();
+      const monthName = `${month}/${year}`;
+      data.push({
+        name: monthName,
+        revenue: 0,
+      });
+    }
+    return data;
+  }
+
+  private formatRevenueData(
+    rawResults: MonthlyRevenueResult[],
+    count: number,
+  ): MonthlyRevenueData[] {
+    const initializedArray = this.initializeRevenueArray(count);
+    const monthlyDataMap = initializedArray.reduce(
+      (map, item) => {
+        map[item.name] = item;
+        return map;
+      },
+      {} as Record<string, MonthlyRevenueData>,
+    );
+    for (const raw of rawResults) {
+      const [yearStr, monthStr] = raw.monthYear.split('-');
+      const month = parseInt(monthStr);
+      const year = parseInt(yearStr);
+      const monthKey = `${month}/${year}`;
+
+      if (monthlyDataMap[monthKey]) {
+        monthlyDataMap[monthKey].revenue = parseFloat(raw.totalNetRevenue);
+      }
+    }
+    return Object.values(monthlyDataMap);
+  }
+
+  async handelGetTeacherPayments(teacherId: string) {
+    const teacherCourses = await this.courseRepo.find({
+      select: ['id'],
+      where: {
+        instructor: { userId: teacherId },
+        status: 'published',
+      },
+      relations: ['instructor'],
+    });
+
+    if (!teacherCourses || teacherCourses.length === 0) {
+      return this.initializeRevenueArray(12);
+    }
+
+    const teacherCourseIds = teacherCourses.map((c) => c.id);
+
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setFullYear(endDate.getFullYear(), endDate.getMonth() - 11, 1); // Đặt về ngày 1 của tháng 12 trước
+
+    const revenueResults: MonthlyRevenueResult[] = await this.paymentItemRepo
+      .createQueryBuilder('item')
+      .innerJoin('item.payment', 'payment', 'payment.status = :status', {
+        status: 'success',
+      })
+      .where('item.course_id IN (:...courseIds)', {
+        courseIds: teacherCourseIds,
+      })
+      .andWhere('payment.paid_at >= :startDate', {
+        startDate: startDate.toISOString(),
+      })
+      .select("DATE_FORMAT(payment.paid_at, '%Y-%m')", 'monthYear')
+      .addSelect(`SUM(item.price * (1 - :feeRate))`, 'totalNetRevenue')
+      .setParameter('feeRate', PLATFORM_FEE_RATE)
+      .groupBy('monthYear')
+      .orderBy('monthYear', 'ASC')
+      .getRawMany();
+
+    return this.formatRevenueData(revenueResults, 12);
   }
 }

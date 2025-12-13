@@ -39,6 +39,9 @@ import { LessonNoteModule } from './modules/lesson_note/lesson_note.module';
 import { LessonNote } from './modules/lesson_note/entities/lesson_note.entity';
 import { UserPreferencesModule } from './modules/user_preferences/user_preferences.module';
 import { UserPreference } from './modules/user_preferences/entities/user_preference.entity';
+import { LessonVideoModule } from './modules/lesson_video/lesson_video.module';
+import { LessonVideo } from './modules/lesson_video/entities/lesson_video.entity';
+import { ProgressModule } from './progress/progress.module';
 
 @Module({
   imports: [
@@ -70,6 +73,7 @@ import { UserPreference } from './modules/user_preferences/entities/user_prefere
         QuizQuestion,
         QuizOption,
         UserPreference,
+        LessonVideo,
       ],
       synchronize: false,
       logging: false,
@@ -122,6 +126,8 @@ import { UserPreference } from './modules/user_preferences/entities/user_prefere
     QuizOptionModule,
     LessonNoteModule,
     UserPreferencesModule,
+    LessonVideoModule,
+    ProgressModule,
   ],
   controllers: [],
   providers: [],

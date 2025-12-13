@@ -12,6 +12,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Comment } from '../../../modules/comment/entities/comment.entity';
+import { PaymentItem } from '../../../modules/payment_items/entities/payment_item.entity';
 
 @Entity('course')
 export class Course {
@@ -21,7 +22,7 @@ export class Course {
   @Column({ name: 'title', type: 'varchar' })
   title: string;
 
-  @Column({ name: 'description', type: 'text' })
+  @Column({ name: 'description', type: 'text', nullable: true })
   description: string;
 
   @Column({ name: 'requirements', type: 'json', nullable: true })
@@ -40,7 +41,7 @@ export class Course {
     scale: 2,
     nullable: true,
   })
-  price: number;
+  price: number | null;
 
   @Column({
     name: 'original_price',
@@ -49,7 +50,7 @@ export class Course {
     scale: 2,
     nullable: true,
   })
-  originalPrice: number;
+  originalPrice: number | null;
 
   @Column({ name: 'image', type: 'varchar', nullable: true })
   image: string;
@@ -76,14 +77,14 @@ export class Course {
   discount: number | null;
 
   @Column({ type: 'timestamp', nullable: true })
-  discountExpiresAt: Date;
+  discountExpiresAt: Date | null;
 
   @Column({
     type: 'enum',
-    enum: ['draft', 'pending', 'published', 'archived'],
+    enum: ['draft', 'pending', 'published', 'rejected'],
     default: 'draft',
   })
-  status: 'draft' | 'pending' | 'published' | 'archived';
+  status: 'draft' | 'pending' | 'published' | 'rejected';
 
   @ManyToOne(() => Category, (category) => category.courses)
   @JoinColumn({ name: 'category_id' })
@@ -92,6 +93,9 @@ export class Course {
   @ManyToOne(() => User, (user) => user.courses)
   @JoinColumn({ name: 'instructor_id' })
   instructor: User;
+
+  @OneToMany(() => PaymentItem, (item) => item.course)
+  paymentItems: PaymentItem[];
 
   @OneToMany(() => Chapter, (chapter) => chapter.course, { cascade: true })
   chapters: Chapter[];

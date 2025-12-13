@@ -93,11 +93,11 @@ export const seedLessonCommentsWithRandomUsers = async (
       const replyComment = commentRepo.create({
         user: randomUser,
         lesson,
-        course: lesson.chapter.course, // Đảm bảo gán course
+        course: lesson.chapter.course,
         content: replyContent,
         type: 'lesson',
         rating: null,
-        parent: mainComment, // Quan trọng: thiết lập reply
+        parent: mainComment,
       });
 
       await commentRepo.save(replyComment);
