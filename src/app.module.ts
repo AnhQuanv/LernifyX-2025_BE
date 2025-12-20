@@ -42,6 +42,7 @@ import { UserPreference } from './modules/user_preferences/entities/user_prefere
 import { LessonVideoModule } from './modules/lesson_video/lesson_video.module';
 import { LessonVideo } from './modules/lesson_video/entities/lesson_video.entity';
 import { ProgressModule } from './progress/progress.module';
+import { MuxModule } from './modules/mux/mux.module';
 
 @Module({
   imports: [
@@ -128,6 +129,7 @@ import { ProgressModule } from './progress/progress.module';
     UserPreferencesModule,
     LessonVideoModule,
     ProgressModule,
+    MuxModule,
   ],
   controllers: [],
   providers: [],

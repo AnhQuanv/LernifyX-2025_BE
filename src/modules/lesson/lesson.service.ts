@@ -92,6 +92,33 @@ export class LessonService {
     };
   }
 
+  async handleUpdateLesson1(dto: UpdateLessonDto) {
+    const { id: lessonId, ...updateData } = dto;
+
+    const lesson = await this.lessonRepository.findOne({
+      where: { id: lessonId },
+      relations: ['chapter', 'chapter.course', 'chapter.course.instructor'],
+    });
+
+    if (!lesson) {
+      throw new NotFoundException(
+        `Không tìm thấy bài học với ID "${lessonId}".`,
+      );
+    }
+
+    this.lessonRepository.merge(lesson, updateData);
+    const updatedLesson = await this.lessonRepository.save(lesson);
+
+    return {
+      chapterId: updatedLesson.chapter.id,
+      id: updatedLesson.id,
+      title: updatedLesson.title,
+      content: updatedLesson.content,
+      order: updatedLesson.order,
+      duration: updatedLesson.duration,
+    };
+  }
+
   async handleDeleteLesson(
     lessonId: string,
     userId: string,

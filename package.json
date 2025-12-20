@@ -22,9 +22,11 @@
     "migration:run": "npm run build && typeorm migration:run -d dist/src/typeorm.config.js",
     "migration:revert": "npm run build && typeorm migration:revert -d dist/src/typeorm.config.js",
     "migration:create": "typeorm migration:create typeorm/migrations/NewMigration",
-    "seed": "ts-node src/seed.ts"
+    "seed": "ts-node src/seed.ts",
+    "seed1": "ts-node src/seed1.ts"
   },
   "dependencies": {
+    "@mux/mux-node": "^12.8.1",
     "@nestjs-modules/mailer": "^2.0.2",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
@@ -35,6 +37,8 @@
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/platform-socket.io": "^11.1.9",
     "@nestjs/typeorm": "^11.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.49.0",
+    "@typescript-eslint/parser": "^8.49.0",
     "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
@@ -56,7 +60,9 @@
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.1",
     "typeorm": "^0.3.25",
-    "vnpay": "^2.4.4"
+    "videojs-mux": "^4.21.13",
+    "vnpay": "^2.4.4",
+    "vntk": "^1.4.4"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -88,8 +94,8 @@
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.8.3",
-    "typescript-eslint": "^8.20.0"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.49.0"
   },
   "jest": {
     "moduleFileExtensions": [

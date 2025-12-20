@@ -25,6 +25,14 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
+  bio?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsString()
   avatar?: string;
 }
 

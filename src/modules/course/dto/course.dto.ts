@@ -16,7 +16,7 @@ export class CourseDto {
   level: string;
 
   @Expose()
-  revenue: number | null;
+  revenue?: number | null;
 
   @Expose()
   duration: number;

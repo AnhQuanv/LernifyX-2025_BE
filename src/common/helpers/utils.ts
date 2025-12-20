@@ -9,9 +9,3 @@ export const formatDate = (date: Date): string => {
     pad(date.getSeconds())
   );
 };
-
-const USD_TO_VND = 25000;
-
-export const convertUSDToVND = (amountUSD: number) => {
-  return Math.round(amountUSD * USD_TO_VND);
-};

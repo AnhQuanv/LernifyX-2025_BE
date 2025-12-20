@@ -98,6 +98,26 @@ export class PaymentController {
     return ApiResponse.success(result, 'Lấy doanh thu hàng tháng thành công');
   }
 
+  @Get('teacher-payment-course')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('teacher')
+  async getSpecificPayments(
+    @Req() req: RequestWithUser,
+    @Query('courseId') courseId: string,
+
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+  ) {
+    const userId = req.user?.sub;
+    const result = await this.paymentService.handleGetSpecificPayments(
+      courseId,
+      startDate,
+      endDate,
+      userId,
+    );
+    return ApiResponse.success(result, 'Lấy doanh thu hàng tháng thành công');
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('student')

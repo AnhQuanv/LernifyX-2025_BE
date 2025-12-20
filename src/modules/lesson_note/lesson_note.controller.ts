@@ -14,6 +14,7 @@ import { RequestWithUser } from '../user/user.controller';
 import { CreateLessonNoteDto } from './dto/create-lesson_note.dto';
 import { UpdateLessonNoteDto } from './dto/update-lesson_note.dto';
 import { ApiResponse } from 'src/common/bases/api-response';
+import { RolesGuard } from '../auth/roles.guard';
 
 @Controller('v1/lesson-note')
 @UseGuards(JwtAuthGuard)
@@ -22,7 +23,7 @@ export class LessonNoteController {
   constructor(private readonly lessonNoteService: LessonNoteService) {}
 
   @Post('/create')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('student')
   async createNote(
     @Req() req: RequestWithUser,
@@ -37,7 +38,7 @@ export class LessonNoteController {
   }
 
   @Patch('/update')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('student')
   async updateNote(
     @Req() req: RequestWithUser,
@@ -52,6 +53,8 @@ export class LessonNoteController {
   }
 
   @Delete('/delete')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('student')
   async deleteNote(
     @Req() req: RequestWithUser,
     @Body('noteId') noteId: string,

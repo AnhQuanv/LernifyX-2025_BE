@@ -8,19 +8,13 @@ import { User } from '../user/entities/user.entity';
 import { LessonVideo } from '../lesson_video/entities/lesson_video.entity';
 import { LessonVideoModule } from '../lesson_video/lesson_video.module';
 import { Lesson } from '../lesson/entities/lesson.entity';
-import { ProgressGateway } from './progress.gateway';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, LessonVideo, Lesson]),
     LessonVideoModule,
   ],
-  providers: [
-    CloudinaryProvider,
-    CloudinaryService,
-    UserService,
-    ProgressGateway,
-  ],
+  providers: [CloudinaryProvider, CloudinaryService, UserService],
   controllers: [CloudinaryController],
   exports: [CloudinaryService, CloudinaryProvider],
 })

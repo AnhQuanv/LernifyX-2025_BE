@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -95,6 +96,38 @@ export class CourseController {
     );
   }
 
+  @Get('teacher')
+  @UseGuards(OptionalJwtAuthGuard)
+  async getTeacher(
+    @Query('search') search: string = '',
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 6,
+  ) {
+    const result = await this.courseService.handleGetTeacher({
+      search,
+      limit,
+      page,
+    });
+    return ApiResponse.success(result, 'Lấy danh sách giảng viên thành công');
+  }
+
+  @Get('teacher-course-detail')
+  @UseGuards(OptionalJwtAuthGuard)
+  async getTeacherDetail(
+    @Req() req: RequestWithUser,
+    @Query('teacherId') teacherId: string,
+  ) {
+    if (!teacherId) {
+      throw new BadRequestException('Giảng viên không hợp lệ');
+    }
+    const userId = req.user?.sub;
+    const result = await this.courseService.handleGetTeacherDetail(
+      teacherId,
+      userId,
+    );
+    return ApiResponse.success(result, 'Lấy giảng viên chi tiết thành công');
+  }
+
   @Get(':courseId/lesson/:lessonId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('student')
@@ -113,7 +146,7 @@ export class CourseController {
   }
 
   @Post('create')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher')
   async createCourse(
     @Body() dto: CreateCourseDto,
@@ -125,7 +158,7 @@ export class CourseController {
   }
 
   @Put('update')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher')
   async updateCourse(
     @Body() dto: UpdateCourseDto,
@@ -141,7 +174,7 @@ export class CourseController {
   }
 
   @Delete('delete')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher')
   async deleteChapter(
     @Body('courseId') courseId: string,
@@ -242,6 +275,22 @@ export class CourseController {
     return ApiResponse.success(counts, 'Lấy chỉnh sửa khóa học thành công!');
   }
 
+  @Get('teacher-revenue-page')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('teacher')
+  async getTeacherCoursesRevenuePage(
+    @Query('courseId') courseId: string,
+    @Req() req: RequestWithUser,
+  ) {
+    const teacherId = req.user.sub;
+    const courses =
+      await this.courseService.handleGetTeacherCoursesRevenuePage(teacherId);
+    return ApiResponse.success(
+      courses,
+      'Lấy doanh thu chi tiêt khóa học thành công!',
+    );
+  }
+
   @Get('teacher-course-revenue')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher')
@@ -252,6 +301,6 @@ export class CourseController {
     const teacherId = req.user.sub;
     const courses =
       await this.courseService.handleGetTeacherCoursesRevenue(teacherId);
-    return ApiResponse.success(courses, 'Lấy chỉnh sửa khóa học thành công!');
+    return ApiResponse.success(courses, 'Lấy danh sách khóa học thành công!');
   }
 }

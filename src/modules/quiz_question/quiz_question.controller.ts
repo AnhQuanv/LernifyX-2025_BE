@@ -14,13 +14,14 @@ import { ApiResponse } from 'src/common/bases/api-response';
 import { QuizQuestionService } from './quiz_question.service';
 import { CreateQuizQuestionDto } from './dto/create-quiz_question.dto';
 import { UpdateQuizQuestionDto } from './dto/update-quiz_question.dto';
+import { RolesGuard } from '../auth/roles.guard';
 
 @Controller('v1/quiz-question')
 export class QuizQuestionController {
   constructor(private readonly quizQuestionService: QuizQuestionService) {}
 
   @Post('create')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher')
   async createQuestion(
     @Body() dto: CreateQuizQuestionDto,
@@ -35,7 +36,7 @@ export class QuizQuestionController {
   }
 
   @Put('update')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher')
   async updateQuestion(
     @Body() dto: UpdateQuizQuestionDto,
@@ -51,7 +52,7 @@ export class QuizQuestionController {
   }
 
   @Delete('delete')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher')
   async deleteQuestion(
     @Body('questionId') questionId: string,

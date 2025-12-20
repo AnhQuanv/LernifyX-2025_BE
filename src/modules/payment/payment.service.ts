@@ -1,4 +1,9 @@
-import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  HttpException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Payment } from './entities/payment.entity';
 import { Repository } from 'typeorm';
@@ -12,7 +17,7 @@ import {
   VNPay,
   VnpLocale,
 } from 'vnpay';
-import { convertUSDToVND, formatDate } from 'src/common/helpers/utils';
+import { formatDate } from 'src/common/helpers/utils';
 import { Response } from 'express';
 import {
   MoMoCreateResponse,
@@ -35,6 +40,18 @@ export interface MonthlyRevenueData {
   name: string;
   revenue: number;
 }
+
+export interface WeeklyRevenueItem {
+  dayOfWeek: string;
+  date: string;
+  totalNetRevenue: number;
+}
+
+interface DailyRevenueResult {
+  paidDate: string;
+  totalNetRevenue: string;
+}
+
 const PLATFORM_FEE_RATE = 0.1;
 @Injectable()
 export class PaymentService {
@@ -298,13 +315,16 @@ export class PaymentService {
       });
     }
 
-    const totalUSD = courses.reduce((s, c) => s + Number(c.price), 0);
+    const subTotal = courses.reduce((s, c) => s + Number(c.price), 0);
 
-    const totalVND = convertUSDToVND(totalUSD);
+    const vatRate = 0.1;
+    const vatAmount = Math.round(subTotal * vatRate);
+
+    const totalWithVAT = subTotal + vatAmount;
 
     const payment = this.paymentRepo.create({
       user: { userId },
-      amount: totalVND,
+      amount: totalWithVAT,
       status: 'pending',
       gateway: 'MOMO',
       transaction_ref: `TXN-${nanoid(8).toUpperCase()}`,
@@ -344,7 +364,8 @@ export class PaymentService {
     const redirectUrl = process.env.MOMO_REDIRECT_URL!;
     const ipnUrl = process.env.MOMO_IPN_URL!;
     const extraData = '';
-
+    console.log('MoMo Payment Amount:', amount);
+    console.log('Raw payment.amount:', payment.amount);
     const rawSignature =
       `accessKey=${accessKey}` +
       `&amount=${amount}` +
@@ -402,11 +423,9 @@ export class PaymentService {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         console.error('STATUS:', error.response.status);
 
-        // Ném lỗi chi tiết ra ngoài
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
         throw new HttpException(error.response.data, error.response.status);
       }
-      // Ném lỗi Axios ban đầu nếu không phải lỗi 400 từ MoMo
       throw error;
     }
   }
@@ -641,5 +660,124 @@ export class PaymentService {
       .getRawMany();
 
     return this.formatRevenueData(revenueResults, 12);
+  }
+
+  private formatRevenueByDayOfWeek(
+    revenueResults: DailyRevenueResult[],
+    startDate: Date,
+    endDate: Date,
+  ) {
+    const revenueMap = new Map<string, number>();
+
+    revenueResults.forEach((result) => {
+      const netRevenue = parseFloat(result.totalNetRevenue) || 0;
+      revenueMap.set(result.paidDate, netRevenue);
+    });
+
+    const rawData: WeeklyRevenueItem[] = [];
+    const currentDate = new Date(startDate);
+
+    const dayNames = [
+      'Chủ Nhật',
+      'Thứ Hai',
+      'Thứ Ba',
+      'Thứ Tư',
+      'Thứ Năm',
+      'Thứ Sáu',
+      'Thứ Bảy',
+    ];
+
+    while (currentDate <= endDate) {
+      const yyyy = currentDate.getFullYear();
+      const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
+      const dd = String(currentDate.getDate()).padStart(2, '0');
+      const dateKey = `${yyyy}-${mm}-${dd}`; // YYYY-MM-DD
+
+      // Lấy chỉ số ngày trong tuần (0=CN, 1=T2, ..., 6=T7)
+      const dayIndex = currentDate.getDay();
+      const dayOfWeekName = dayNames[dayIndex];
+
+      const netRevenue = revenueMap.get(dateKey) || 0;
+
+      rawData.push({
+        dayOfWeek: dayOfWeekName,
+        date: dateKey,
+        totalNetRevenue: netRevenue,
+      });
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    const sortFunction = (a: WeeklyRevenueItem, b: WeeklyRevenueItem) => {
+      const getDayIndex = (dateString: string): number => {
+        return new Date(dateString).getDay();
+      };
+
+      const indexA = getDayIndex(a.date);
+      const indexB = getDayIndex(b.date);
+      const sortedIndexA = (indexA + 6) % 7;
+      const sortedIndexB = (indexB + 6) % 7;
+
+      return sortedIndexA - sortedIndexB;
+    };
+
+    const finalData = rawData.sort(sortFunction);
+
+    return finalData;
+  }
+
+  async handleGetSpecificPayments(
+    courseId: string,
+    startDateString: string,
+    endDateString: string,
+    teacherId: string,
+  ) {
+    const course = await this.courseRepo.findOne({
+      where: {
+        id: courseId,
+        instructor: { userId: teacherId },
+        status: 'published',
+      },
+      select: ['id'],
+    });
+
+    if (!course) {
+      throw new UnauthorizedException(
+        'Không tìm thấy khóa học này, hoặc bạn không có quyền truy cập vào doanh thu của khóa học này.',
+      );
+    }
+    const startDate = new Date(startDateString);
+    const endDate = new Date(endDateString);
+    const formattedEndDate = new Date(endDate.setHours(23, 59, 59, 999));
+
+    const revenueResults = await this.paymentItemRepo
+      .createQueryBuilder('item')
+      .innerJoin('item.payment', 'payment', 'payment.status = :status', {
+        status: 'success',
+      })
+      .innerJoin('item.course', 'course')
+      .innerJoin('course.instructor', 'instructor')
+      .where('course.id = :courseId', { courseId })
+      .andWhere('instructor.userId = :teacherId', { teacherId })
+      .andWhere('course.status = :publishedStatus', {
+        publishedStatus: 'published',
+      })
+      .andWhere('payment.paid_at >= :startDate', {
+        startDate: startDate.toISOString(),
+      })
+      .andWhere('payment.paid_at <= :endDate', {
+        endDate: formattedEndDate.toISOString(),
+      })
+      .select("DATE_FORMAT(payment.paid_at, '%Y-%m-%d')", 'paidDate')
+      .addSelect(`SUM(item.price * (1 - :feeRate))`, 'totalNetRevenue')
+      .setParameter('feeRate', PLATFORM_FEE_RATE)
+      .groupBy('paidDate')
+      .orderBy('paidDate', 'ASC')
+      .getRawMany();
+
+    return this.formatRevenueByDayOfWeek(
+      revenueResults as DailyRevenueResult[],
+      startDate,
+      endDate,
+    );
   }
 }

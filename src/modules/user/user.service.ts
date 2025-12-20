@@ -52,6 +52,8 @@ export class UserService {
     if (dto.dateOfBirth) user.dateOfBirth = new Date(dto.dateOfBirth);
     if (dto.address) user.address = dto.address;
     if (dto.avatar) user.avatar = dto.avatar;
+    if (dto.description) user.description = dto.description;
+    if (dto.bio) user.bio = dto.bio;
 
     await this.userRepo.save(user);
     const userDTO = plainToInstance(UserResponseDto, user, {

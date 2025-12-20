@@ -16,23 +16,24 @@ export interface RequestWithUser extends Request {
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
+  @Get('me')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('student')
-  @Get('me')
   async getProfile(@Req() req: RequestWithUser) {
     const user_id = req.user.sub;
     const user = await this.userService.handleGetProfile(user_id);
     return ApiResponse.success(user, 'Lấy thông tin user thành công');
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('student')
   @Put('edit')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('student', 'teacher')
   async updateProfile(
     @Req() req: RequestWithUser,
     @Body() dto: UpdateProfileDto,
   ) {
     const userId = req.user.sub;
+    console.log('role: ', req.user.roleName);
     const updatedUser = await this.userService.handleUpdateProfile(userId, dto);
     return ApiResponse.success(
       updatedUser,
@@ -40,8 +41,9 @@ export class UserController {
     );
   }
 
-  @UseGuards(JwtAuthGuard)
   @Put('change-password')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('student', 'teacher')
   async changePassword(
     @Req() req: RequestWithUser,
     @Body() dto: UpdatePasswordDto,

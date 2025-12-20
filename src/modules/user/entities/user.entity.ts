@@ -41,6 +41,15 @@ export class User {
   @Column({ type: 'varchar', nullable: true })
   address: string | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  bio: string | null;
+
+  @Column({
+    type: 'text',
+    nullable: true,
+  })
+  description: string;
+
   @Column({ name: 'is_active', type: 'boolean', default: false })
   isActive: boolean;
 

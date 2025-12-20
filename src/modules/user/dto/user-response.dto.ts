@@ -25,6 +25,10 @@ export class UserResponseDto {
   @Expose()
   isNewTeacher: boolean;
   @Expose()
+  bio: string;
+  @Expose()
+  description: string;
+  @Expose()
   @Transform(
     ({ obj }: { obj: { role?: RoleDto } }) => obj.role?.roleName ?? null,
   )

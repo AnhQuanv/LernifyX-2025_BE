@@ -14,13 +14,14 @@ import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
 import { RequestWithUser } from '../user/user.controller';
 import { ApiResponse } from 'src/common/bases/api-response';
+import { RolesGuard } from '../auth/roles.guard';
 
 @Controller('v1/lesson')
 export class LessonController {
   constructor(private readonly lessonService: LessonService) {}
 
   @Post('create')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher')
   async createLesson(
     @Body() dto: CreateLessonDto,
@@ -32,7 +33,7 @@ export class LessonController {
   }
 
   @Put('update')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher')
   async updateLesson(
     @Body() dto: UpdateLessonDto,
@@ -47,7 +48,7 @@ export class LessonController {
   }
 
   @Delete('delete')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher')
   async deleteLesson(
     @Body('lessonId') lessonId: string,

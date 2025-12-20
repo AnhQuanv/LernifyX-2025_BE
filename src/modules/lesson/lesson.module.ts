@@ -10,5 +10,6 @@ import { LessonVideo } from '../lesson_video/entities/lesson_video.entity';
   imports: [TypeOrmModule.forFeature([Chapter, Lesson, LessonVideo])],
   controllers: [LessonController],
   providers: [LessonService],
+  exports: [LessonService],
 })
 export class LessonModule {}

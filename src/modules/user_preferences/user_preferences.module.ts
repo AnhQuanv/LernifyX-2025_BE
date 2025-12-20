@@ -8,6 +8,7 @@ import { CartItem } from '../cart_item/entities/cart_item.entity';
 import { Wishlist } from '../wishlist/entities/wishlist.entity';
 import { User } from '../user/entities/user.entity';
 import { Category } from '../category/entities/category.entity';
+import { PaymentItem } from '../payment_items/entities/payment_item.entity';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { Category } from '../category/entities/category.entity';
       Wishlist,
       User,
       Category,
+      PaymentItem,
     ]),
   ],
   controllers: [UserPreferencesController],

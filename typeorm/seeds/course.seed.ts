@@ -22,11 +22,12 @@ export const seedCourses = async (dataSource: DataSource) => {
 
   const studentRole = await roleRepo.findOneBy({ roleName: 'student' });
   const teacherRole = await roleRepo.findOneBy({ roleName: 'teacher' });
-
+  // const sampleAvatarUrl =
+  //   'https://res.cloudinary.com/drc4b7rmj/image/upload/v1765808879/rawdsf9eyxmpxgwja5pe.jpg';
   const sampleImageUrl =
-    'https://res.cloudinary.com/drc4b7rmj/image/upload/v1764497628/Avatar/banh_1764497623330.jpg';
+    'https://res.cloudinary.com/drc4b7rmj/image/upload/v1765697944/fviba233pcpwe3v2h5zo.jpg';
   const sampleOriginalUrl =
-    'https://res.cloudinary.com/drc4b7rmj/video/upload/v1763726091/h4ogqnwmsshbvfneixkv.mp4';
+    'https://stream.mux.com/ZX8gaYCEIL674hZ601nj016sVjkizjbzEsgC102nADZUZY.m3u8';
   const samplePublicIdBase = 'Courses/Videos/sample_lesson_video';
   const sampleDuration = 600;
   const sampleWidth = 1280;

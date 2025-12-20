@@ -14,13 +14,14 @@ import { CreateChapterDto } from './dto/create-chapter.dto';
 import { RequestWithUser } from '../user/user.controller';
 import { ApiResponse } from 'src/common/bases/api-response';
 import { UpdateChapterDto } from './dto/update-chapter.dto';
+import { RolesGuard } from '../auth/roles.guard';
 
 @Controller('v1/chapter')
 export class ChapterController {
   constructor(private readonly chapterService: ChapterService) {}
 
   @Post('create')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher')
   async createChapter(
     @Body() dto: CreateChapterDto,
@@ -32,7 +33,7 @@ export class ChapterController {
   }
 
   @Put('update')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher')
   async updateChapter(
     @Body() dto: UpdateChapterDto,
@@ -47,7 +48,7 @@ export class ChapterController {
   }
 
   @Delete('delete')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher')
   async deleteChapter(
     @Body('chapterId') chapterId: string,

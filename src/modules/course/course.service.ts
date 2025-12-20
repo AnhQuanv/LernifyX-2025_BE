@@ -46,6 +46,10 @@ export interface CourseRevenueRawResult {
   studentCount: string;
   netRevenue: string;
 }
+interface CourseRevenueRaw {
+  id: string;
+  netRevenue: string;
+}
 const PLATFORM_FEE_RATE = 0.1;
 @Injectable()
 export class CourseService {
@@ -420,6 +424,61 @@ export class CourseService {
     };
   }
 
+  async handleGetTeacher({
+    search = '',
+    page = 1,
+    limit = 6,
+  }: {
+    search?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const qb = this.userRepository
+      .createQueryBuilder('user')
+      .innerJoin('user.role', 'role')
+      .innerJoin('user.courses', 'course', 'course.status = :status', {
+        status: 'published',
+      })
+      .where('role.roleName = :role', { role: 'teacher' })
+      .andWhere(
+        search
+          ? '(user.fullName LIKE :search OR user.email LIKE :search)'
+          : '1=1',
+        { search: `%${search}%` },
+      )
+      .select([
+        'user.userId AS id',
+        'user.fullName AS name',
+        'user.bio AS bio',
+        'user.avatar AS image',
+        'user.email AS email',
+        'COUNT(course.id) AS courses',
+        'COALESCE(SUM(course.students), 0) AS students',
+      ])
+      .groupBy('user.userId')
+      // Thêm sắp xếp để giảng viên có nhiều học viên/khóa học lên đầu (tùy chọn)
+      .orderBy('students', 'DESC');
+
+    // Lấy tổng số giảng viên thỏa mãn (đã publish khóa học)
+    const rawDataForAll = await qb.getRawMany();
+    const total = rawDataForAll.length;
+
+    const data = await qb
+      .offset((page - 1) * limit)
+      .limit(limit)
+      .getRawMany();
+
+    return {
+      data,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
   async handleGetLessonDetail(
     courseId: string,
     lessonId: string,
@@ -522,19 +581,6 @@ export class CourseService {
           })
       : [];
     const videoAsset = lesson.videoAsset;
-    let signedVideoUrl: string | null = null;
-    if (canViewVideo && videoAsset) {
-      const expirationTime = Math.floor(Date.now() / 1000) + 300;
-      signedVideoUrl = this.cloudinary.url(videoAsset.publicId, {
-        resource_type: 'video',
-        secure: true,
-        sign_url: true,
-        transformation: [
-          { width: 1280, height: 720, crop: 'limit', quality: 'auto:good' },
-        ],
-        expires_at: expirationTime,
-      });
-    }
     return {
       lessonId: lesson.id,
       title: lesson.title,
@@ -544,7 +590,7 @@ export class CourseService {
         canViewVideo && videoAsset
           ? {
               publicId: videoAsset.publicId,
-              signedVideoUrl: signedVideoUrl,
+              originalUrl: videoAsset.originalUrl,
               duration: videoAsset.duration,
               width: videoAsset.widthOriginal,
               height: videoAsset.heightOriginal,
@@ -553,6 +599,80 @@ export class CourseService {
       progress,
       hasQuiz,
       quiz,
+    };
+  }
+
+  async handleGetTeacherDetail(teacherId: string, userId?: string) {
+    const teacher = await this.userRepository.findOne({
+      where: { userId: teacherId },
+    });
+
+    if (!teacher) {
+      throw new NotFoundException('Giảng viên không tồn tại');
+    }
+
+    let courses = await this.courseRepository.find({
+      where: {
+        status: 'published',
+        instructor: { userId: teacherId },
+      },
+      relations: ['category', 'instructor'],
+      order: { students: 'DESC' },
+    });
+
+    let wishlistCourseIds: string[] = [];
+    let cartCourseIds: string[] = [];
+    let purchasedCourseIds: string[] = [];
+
+    if (userId) {
+      const wishlist = await this.wishlistRepository.find({
+        where: { user: { userId } },
+        relations: ['course'],
+      });
+      wishlistCourseIds = wishlist.map((w) => w.course.id);
+
+      const cart = await this.cartRepository.find({
+        where: { user: { userId } },
+        relations: ['course'],
+      });
+      cartCourseIds = cart.map((c) => c.course.id);
+
+      const payments = await this.paymentRepository.find({
+        where: { user: { userId }, status: 'success' },
+        relations: ['items', 'items.course'],
+      });
+
+      purchasedCourseIds = payments.flatMap((p) =>
+        p.items.map((i) => i.course.id),
+      );
+
+      courses = courses.filter((c) => !purchasedCourseIds.includes(c.id));
+    }
+
+    const coursesList = plainToInstance(CourseDto, courses, {
+      excludeExtraneousValues: true,
+    }).map((course) => ({
+      ...course,
+      isInWishlist: wishlistCourseIds.includes(course.id),
+      isInCart: cartCourseIds.includes(course.id),
+    }));
+
+    const totalStudents = courses.reduce(
+      (sum, c) => sum + (c.students || 0),
+      0,
+    );
+
+    return {
+      id: teacher.userId,
+      name: teacher.fullName,
+      bio: teacher.bio,
+      description: teacher.description,
+      fullBio: teacher.bio,
+      students: totalStudents,
+      courses: courses.length,
+      email: teacher.email,
+      courses_list: coursesList,
+      image: teacher.avatar,
     };
   }
 
@@ -909,8 +1029,8 @@ export class CourseService {
   async handleGetTeacherCourseStudentProgress(
     courseId: string,
     teacherId: string,
-    page,
-    limit,
+    page: number,
+    limit: number,
   ) {
     const course = await this.courseRepository.findOne({
       where: {
@@ -1021,7 +1141,9 @@ export class CourseService {
         orderBy: { 'lesson.order': 'ASC' },
       })
       .leftJoinAndSelect('lesson.videoAsset', 'videoAsset')
-      .leftJoinAndSelect('lesson.quizQuestions', 'quizQuestion')
+      .leftJoinAndSelect('lesson.quizQuestions', 'quizQuestion', undefined, {
+        orderBy: { 'quizQuestion.order': 'ASC' },
+      })
       .leftJoinAndSelect('quizQuestion.options', 'option')
       .getOne();
 
@@ -1052,9 +1174,7 @@ export class CourseService {
           videoAsset: lesson.videoAsset
             ? {
                 id: lesson.videoAsset.id,
-                url_720p: `https://res.cloudinary.com/${process.env.CLOUD_NAME}/video/upload/c_limit,h_720,q_auto:good,w_1280/v1/${lesson.videoAsset.publicId}.mp4`,
-                url_480p: `https://res.cloudinary.com/${process.env.CLOUD_NAME}/video/upload/c_limit,h_480,q_auto:eco,w_854/v1/${lesson.videoAsset.publicId}.mp4`,
-                url_360p: `https://res.cloudinary.com/${process.env.CLOUD_NAME}/video/upload/c_limit,h_360,q_auto:low,w_640/v1/${lesson.videoAsset.publicId}.mp4`,
+                originalUrl: lesson.videoAsset.originalUrl,
                 duration: lesson.videoAsset.duration,
                 widthOriginal: lesson.videoAsset.widthOriginal,
                 heightOriginal: lesson.videoAsset.heightOriginal,
@@ -1158,5 +1278,72 @@ export class CourseService {
       totalNetRevenue: parseFloat(totalNetRevenue.toFixed(2)),
       courseRevenueDetails: courseRevenueDetails,
     };
+  }
+
+  async handleGetTeacherCoursesRevenuePage(teacherId: string) {
+    const teacherPublishedCourses = await this.courseRepository.find({
+      select: ['id', 'title', 'rating', 'students'],
+      where: {
+        instructor: { userId: teacherId },
+        status: 'published',
+      },
+      relations: ['instructor'],
+    });
+
+    if (!teacherPublishedCourses || teacherPublishedCourses.length === 0) {
+      return [];
+    }
+
+    const teacherCourseIds = teacherPublishedCourses.map((c) => c.id);
+
+    const courseRevenueRaw = await this.paymentItemRepository
+      .createQueryBuilder('item')
+      .innerJoin('item.payment', 'payment', 'payment.status = :status', {
+        status: 'success',
+      })
+      .where('item.course_id IN (:...courseIds)', {
+        courseIds: teacherCourseIds,
+      })
+      .select('item.course_id', 'id')
+      .addSelect(`SUM(item.price * (1 - :feeRate))`, 'netRevenue')
+      .setParameter('feeRate', PLATFORM_FEE_RATE)
+      .groupBy('item.course_id')
+      .getRawMany();
+
+    const courseNetRevenues: { id: string; netValue: number }[] = [];
+
+    for (const raw of courseRevenueRaw as CourseRevenueRaw[]) {
+      const netRevenueValue = parseFloat(raw.netRevenue) || 0;
+
+      if (netRevenueValue > 0) {
+        courseNetRevenues.push({ id: raw.id, netValue: netRevenueValue });
+      }
+    }
+
+    const courseInfoMap = new Map(
+      teacherPublishedCourses.map((c) => [
+        c.id,
+        { title: c.title, rating: c.rating, students: c.students },
+      ]),
+    );
+
+    const courseRevenueDetails = courseNetRevenues.map((item) => {
+      const courseId = item.id;
+      const netRevenueValue = item.netValue;
+      const courseInfo = courseInfoMap.get(courseId);
+      const courseTitle = courseInfo?.title || 'Khóa học không xác định';
+      const courseRating = courseInfo?.rating || 0;
+      const courseStudents = courseInfo?.students || 0;
+
+      return {
+        id: courseId,
+        name: courseTitle,
+        rating: courseRating,
+        students: courseStudents,
+        netRevenue: netRevenueValue,
+      };
+    });
+
+    return courseRevenueDetails;
   }
 }

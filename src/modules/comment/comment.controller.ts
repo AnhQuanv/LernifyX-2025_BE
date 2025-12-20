@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RequestWithUser } from '../user/user.controller';
 import { CreateCommentDto } from './dto/create-comment.dto';
+import { RolesGuard } from '../auth/roles.guard';
 
 @Controller('v1/comment')
 export class CommentController {
@@ -54,7 +55,7 @@ export class CommentController {
   }
 
   @Post('/create')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('student')
   async createComment(
     @Body() body: CreateCommentDto,
