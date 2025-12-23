@@ -23,8 +23,6 @@ export class UserResponseDto {
   @Expose()
   hasPreferences: boolean;
   @Expose()
-  isNewTeacher: boolean;
-  @Expose()
   bio: string;
   @Expose()
   description: string;

@@ -105,6 +105,7 @@ export class MuxController {
         throw new UnauthorizedException('Chữ ký Webhook không hợp lệ.');
       }
     } // 3. PARSE JSON sau khi xác thực thành công
+    const now = new Date().toLocaleString('vi-VN');
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const data: MuxWebhookPayload = JSON.parse(rawBodyString); // 4. XỬ LÝ SỰ KIỆN
@@ -123,7 +124,7 @@ export class MuxController {
       const savedVideo =
         await this.lessonVideoService.saveLessonVideo(videoDataToSave);
       console.log(
-        `[CONTROLLER] Đã lưu DB thành công. Gửi tín hiệu WS cho Task: ${taskId}`,
+        `[${now}]  [CONTROLLER] Đã lưu DB thành công. Gửi tín hiệu WS cho Task: ${taskId}`,
       );
       this.progressGateway.sendComplete(taskId, savedVideo);
       return { received: true };

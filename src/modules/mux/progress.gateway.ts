@@ -31,18 +31,21 @@ export class ProgressGateway
 
   handleDisconnect(client: Socket) {
     const socketId = client.id;
-    const disconnectedTaskId = this.socketToTaskMap.get(socketId);
+    const taskId = this.socketToTaskMap.get(socketId);
 
-    if (disconnectedTaskId) {
-      this.connectedClients.delete(disconnectedTaskId);
+    if (taskId) {
       this.socketToTaskMap.delete(socketId);
       console.log(
-        `[WS] Socket ${socketId} (Task ID: ${disconnectedTaskId}) đã bị xóa khỏi Map.`,
+        `[WS] Socket ${socketId} ngắt, tạm giữ Task ${taskId} chờ reconnect.`,
       );
-    } else {
-      console.log(
-        `[WS] Client ${socketId} ngắt kết nối, không tìm thấy Task ID đăng ký.`,
-      );
+
+      setTimeout(() => {
+        const currentSocket = this.connectedClients.get(taskId);
+        if (currentSocket && currentSocket.id === socketId) {
+          this.connectedClients.delete(taskId);
+          console.log(`[WS] Đã dọn dẹp Task ${taskId} sau thời gian chờ.`);
+        }
+      }, 60000);
     }
   }
 
@@ -55,25 +58,28 @@ export class ProgressGateway
       console.error('Lỗi: Đối tượng client (socket) không tồn tại.');
       return;
     }
-    this.connectedClients.set(taskId, client); // Lưu vào Map ngược (Socket ID -> Task ID)
+    this.connectedClients.set(taskId, client);
     this.socketToTaskMap.set(client.id, taskId);
 
     console.log(`[WS] Đã đăng ký taskId ${taskId} cho socket ${client.id}`);
   }
 
   sendComplete(taskId: string, data: any) {
+    const now = new Date().toLocaleString('vi-VN');
     const clientSocket = this.connectedClients.get(taskId);
     if (!clientSocket) {
       console.error(
-        `[WS-LỖI] Socket cho Task ID ${taskId} KHÔNG ĐƯỢC TÌM THẤY! (Socket đã ngắt)`,
+        `[${now}] [WS-LỖI] Socket cho Task ID ${taskId} KHÔNG ĐƯỢC TÌM THẤY! (Socket đã ngắt)`,
       );
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       this.server.emit('upload_complete', { taskId, data });
-      console.log(`[WS-FALLBACK] Đã gửi broadcast cho Task ID: ${taskId}.`);
+      console.log(
+        `[${now}] [WS-FALLBACK] Đã gửi broadcast cho Task ID: ${taskId}.`,
+      );
     } else {
       console.log(
-        `[WS-THÀNH CÔNG] Socket cho Task ID ${taskId} được tìm thấy.`,
+        `[${now}] [WS-THÀNH CÔNG] Socket cho Task ID ${taskId} được tìm thấy.`,
       );
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       clientSocket.emit('upload_complete', { taskId, data });

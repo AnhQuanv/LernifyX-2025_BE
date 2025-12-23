@@ -574,6 +574,7 @@ export class UserPreferencesService {
         'price',
         'originalPrice',
         'instructor',
+        'duration',
       ],
       where: {
         status: 'published',

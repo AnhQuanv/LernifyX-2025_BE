@@ -397,10 +397,10 @@ const coursesData: CourseData[] = [
     instructorName: 'Nguyễn Văn An',
     level: 'Trung Cấp',
     duration: 3600 * 45,
-    price: 1000000,
+    price: 0,
     originalPrice: 1000000,
     discount: 0,
-    discountExpiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+    discountExpiresAt: null,
     description:
       'Thành thạo React từ cơ bản đến nâng cao với các dự án thực tế và Redux Toolkit.',
     learnings: [
@@ -7261,7 +7261,7 @@ export const seedCourses1 = async (dataSource: DataSource) => {
 
         const videoAsset = lessonVideoRepo.create({
           lesson: lesson,
-          publicId: '02XE4cKuSDOBTKzLw5beN01dna8VCo02TSRRnP8Bq5x5Cc',
+          publicId: uuidv4(),
           originalUrl: sampleOriginalUrl,
           duration: sampleDuration,
           widthOriginal: sampleWidth,

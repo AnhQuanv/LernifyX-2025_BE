@@ -582,7 +582,7 @@ export class CourseService {
       : [];
     const videoAsset = lesson.videoAsset;
     return {
-      lessonId: lesson.id,
+      id: lesson.id,
       title: lesson.title,
       duration: lesson.duration,
       canViewVideo,

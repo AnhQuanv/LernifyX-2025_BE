@@ -23,7 +23,6 @@ export const seedLessonCommentsForBuyers = async (dataSource: DataSource) => {
   const commentRepo = dataSource.getRepository(Comment);
   const courseRepo = dataSource.getRepository(Course);
 
-  // 1️⃣ Lấy 10 buyers đã seed
   const buyerEmails = Array.from(
     { length: 10 },
     (_, i) => `buyer_${i + 1}@seed-data.com`,
@@ -35,7 +34,6 @@ export const seedLessonCommentsForBuyers = async (dataSource: DataSource) => {
     return;
   }
 
-  // 2️⃣ Lấy khóa học + relation chapters.lessons
   const courses = await courseRepo.find({
     where: { title: In(COURSE_TITLES_TO_SEED) },
     relations: ['chapters', 'chapters.lessons'],

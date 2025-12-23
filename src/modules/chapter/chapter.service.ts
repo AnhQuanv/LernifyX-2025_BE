@@ -9,6 +9,7 @@ import { Course } from '../course/entities/course.entity';
 import { Repository } from 'typeorm';
 import { CreateChapterDto } from './dto/create-chapter.dto';
 import { UpdateChapterDto } from './dto/update-chapter.dto';
+import { MuxService } from '../mux/mux.service';
 
 @Injectable()
 export class ChapterService {
@@ -17,6 +18,7 @@ export class ChapterService {
     private readonly courseRepository: Repository<Course>,
     @InjectRepository(Chapter)
     private readonly chapterRepository: Repository<Chapter>,
+    private readonly muxService: MuxService,
   ) {}
 
   async handleCreateChapter(dto: CreateChapterDto, userId: string) {
@@ -92,19 +94,30 @@ export class ChapterService {
   async handleDeleteChapter(chapterId: string, userId: string) {
     const chapter = await this.chapterRepository.findOne({
       where: { id: chapterId },
-      relations: ['course', 'course.instructor'],
+      relations: [
+        'course',
+        'course.instructor',
+        'lessons',
+        'lessons.videoAsset',
+      ],
     });
 
-    if (!chapter) {
-      throw new NotFoundException(
-        `Không tìm thấy chương với ID "${chapterId}".`,
-      );
-    }
+    if (!chapter) throw new NotFoundException('Không tìm thấy chương.');
+
     if (chapter.course.instructor.userId !== userId) {
-      throw new ForbiddenException(
-        'Bạn không có quyền xóa chương của khóa học này.',
+      throw new ForbiddenException('Bạn không có quyền xóa chương này.');
+    }
+
+    const lessonsWithVideo = chapter.lessons.filter((l) => l.videoId);
+
+    if (lessonsWithVideo.length > 0) {
+      await Promise.allSettled(
+        lessonsWithVideo.map((lesson) =>
+          this.muxService.handleDeleteVideo(lesson.videoId!, userId),
+        ),
       );
     }
+
     await this.chapterRepository.delete(chapterId);
 
     return { deleted: true };

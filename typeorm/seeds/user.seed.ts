@@ -53,9 +53,6 @@ export const seedUsers = async (dataSource: DataSource) => {
         ...user,
         password: hashedPassword,
       });
-      if (user.role.roleName === 'teacher') {
-        userToSave.isNewTeacher = true;
-      }
       await userRepo.save(userToSave);
     }
   }

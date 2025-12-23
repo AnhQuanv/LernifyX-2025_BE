@@ -197,10 +197,6 @@ export class AuthService {
       codeExpiresAt: codeExpiresAt.toDate(),
     });
 
-    if (registerDto.roleName === 'teacher') {
-      newUser.isNewTeacher = true;
-    }
-
     const savedUser = await this.userRepository.save(newUser);
     await this.mailerService.sendMail({
       to: savedUser.email,

@@ -9,6 +9,7 @@ import { Chapter } from '../chapter/entities/chapter.entity';
 import { Lesson } from './entities/lesson.entity';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
+import { MuxService } from '../mux/mux.service';
 
 @Injectable()
 export class LessonService {
@@ -17,6 +18,7 @@ export class LessonService {
     private readonly chapterRepository: Repository<Chapter>,
     @InjectRepository(Lesson)
     private readonly lessonRepository: Repository<Lesson>,
+    private readonly muxService: MuxService,
   ) {}
 
   async handleCreateLesson(dto: CreateLessonDto, userId: string) {
@@ -127,7 +129,6 @@ export class LessonService {
       where: { id: lessonId },
       relations: ['chapter', 'chapter.course', 'chapter.course.instructor'],
     });
-
     if (!lesson) {
       throw new NotFoundException(
         `Không tìm thấy bài học với ID "${lessonId}".`,
@@ -140,6 +141,9 @@ export class LessonService {
       );
     }
 
+    if (lesson.videoId) {
+      await this.muxService.handleDeleteVideo(lesson.videoId, userId);
+    }
     await this.lessonRepository.delete(lessonId);
 
     return { deleted: true };
