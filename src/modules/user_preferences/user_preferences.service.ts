@@ -16,7 +16,6 @@ import { PaymentItem } from '../payment_items/entities/payment_item.entity';
 
 const wordTokenizer = vntk.wordTokenizer();
 
-// Định nghĩa Interface để thêm điểm số tạm thời
 interface CourseWithLevelScore extends Course {
   levelScore?: number;
   totalScore?: number;
@@ -62,6 +61,8 @@ export class UserPreferencesService {
     'ở',
     'này',
     'cho',
+    'mà',
+    'đó',
     'hay',
     'rằng',
     'như',
@@ -331,6 +332,7 @@ export class UserPreferencesService {
   getCourseText(course: Course): string {
     return [
       course.title,
+      course.title,
       course.description,
       course.category?.categoryName,
       course.level,
@@ -368,8 +370,6 @@ export class UserPreferencesService {
     // 1. TIỀN XỬ LÝ VÀ TÁCH TỪ (VnTK)
     const userRawText = this.getUserPreferenceText(userPreference);
     const userSegmentedText = this.preprocessAndSegment(userRawText);
-    console.log('userRawText', userRawText);
-    console.log('userSegmentedText', userSegmentedText);
     // 2. Xây dựng không gian Vector (Vocabulary) từ các tài liệu đã tách từ
     courses.forEach((course) => {
       const courseRawText = this.getCourseText(course);
@@ -470,9 +470,9 @@ export class UserPreferencesService {
         //   0.05 * (course.levelScore || 0);
 
         const totalScore =
-          Math.sqrt(score) * 0.5 +
-          0.3 * finalStudentScore +
-          0.1 * ratingScore +
+          Math.sqrt(score) * 0.8 +
+          0.05 * finalStudentScore +
+          0.05 * ratingScore +
           0.05 * discountScore +
           0.05 * (course.levelScore || 0);
 
@@ -484,21 +484,17 @@ export class UserPreferencesService {
       .sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0))
       .slice(0, topN);
 
-    const topCourses1 = scoredCourses
-      .sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0))
-      .slice(0, 40);
-
-    // console.table(
-    //   topCourses1.map((c, index) => ({
-    //     Hạng: index + 1,
-    //     'Tiêu đề': c.title.substring(0, 40) + '...',
-    //     'Phù hợp (%)': ((c.totalScore ?? 0) * 100).toFixed(2) + '%',
-    //     'Số HV': c.students,
-    //     Rating: c.rating,
-    //     'Giảm giá': (c.discount || 0) + '%',
-    //     'NLP Score': Math.sqrt(c.score ?? 0).toFixed(2),
-    //   })),
-    // );
+    console.table(
+      topCourses.map((c, index) => ({
+        Hạng: index + 1,
+        'Tiêu đề': c.title.substring(0, 40) + '...',
+        'Phù hợp (%)': ((c.totalScore ?? 0) * 100).toFixed(2) + '%',
+        'Số HV': c.students,
+        Rating: c.rating,
+        'Giảm giá': (c.discount || 0) + '%',
+        'NLP Score': Math.sqrt(c.score ?? 0).toFixed(2),
+      })),
+    );
     const formatted = plainToInstance(CourseDto, topCourses, {
       excludeExtraneousValues: true,
     }).map((course) => ({
@@ -559,23 +555,27 @@ export class UserPreferencesService {
     const purchasedCourseIds = purchasedItems.map((pi) => pi.course.id);
 
     const courses = await this.courseRepo.find({
-      select: [
-        'id',
-        'title',
-        'description',
-        'level',
-        'requirements',
-        'learnings',
-        'rating',
-        'ratingCount',
-        'students',
-        'discount',
-        'discountExpiresAt',
-        'price',
-        'originalPrice',
-        'instructor',
-        'duration',
-      ],
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        level: true,
+        requirements: true,
+        learnings: true,
+        rating: true,
+        ratingCount: true,
+        students: true,
+        discount: true,
+        discountExpiresAt: true,
+        price: true,
+        originalPrice: true,
+        duration: true,
+        image: true,
+        status: true,
+        instructor: {
+          fullName: true,
+        },
+      },
       where: {
         status: 'published',
         category: {
@@ -586,8 +586,9 @@ export class UserPreferencesService {
         }),
       },
       relations: ['category', 'instructor'],
+      order: { rating: 'DESC', students: 'DESC' },
+      take: 50,
     });
-
     const filteredCourses: CourseWithLevelScore[] = courses.map((course) => {
       let levelScore = 0;
       const normalizedCourseLevel = course.level?.toLowerCase();
@@ -619,7 +620,6 @@ export class UserPreferencesService {
 
       return { ...course, levelScore };
     });
-
     return this.recommendCoursesNLP(
       userPref,
       filteredCourses,

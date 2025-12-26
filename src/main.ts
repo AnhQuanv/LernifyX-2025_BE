@@ -8,6 +8,12 @@ import * as express from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  setInterval(() => {
+    const memory = process.memoryUsage();
+    console.log(
+      `RAM: ${Math.round(memory.heapUsed / 1024 / 1024)} MB / Total: ${Math.round(memory.heapTotal / 1024 / 1024)} MB`,
+    );
+  }, 5000);
   app.use(
     express.json({
       verify: (req: any, _, buf, __) => {
@@ -40,7 +46,7 @@ async function bootstrap() {
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
-  await app.listen(process.env.PORT ?? 3001);
+  await app.listen(process.env.PORT || 10000, '0.0.0.0');
 }
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
 bootstrap();
