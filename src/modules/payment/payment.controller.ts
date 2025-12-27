@@ -34,8 +34,8 @@ export class PaymentController {
     const userId = req.user?.sub;
     const clientIp =
       (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.ip;
-    console.log('Client IP:', clientIp);
-    const { courseId, gateway } = createPaymentDto;
+    const gateway = String(createPaymentDto.gateway).trim();
+    const { courseId } = createPaymentDto;
 
     if (!['VNPay', 'MoMo'].includes(gateway)) {
       throw new HttpException(
