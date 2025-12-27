@@ -32,6 +32,9 @@ export class PaymentController {
     @Body() createPaymentDto: CreatePaymentDto,
   ) {
     const userId = req.user?.sub;
+    const clientIp =
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.ip;
+    console.log('Client IP:', clientIp);
     const { courseId, gateway } = createPaymentDto;
 
     if (!['VNPay', 'MoMo'].includes(gateway)) {
@@ -51,7 +54,10 @@ export class PaymentController {
         gateway,
       );
 
-      const paymentUrl = await this.paymentService.handleVNPay(payment);
+      const paymentUrl = await this.paymentService.handleVNPay(
+        payment,
+        clientIp,
+      );
 
       return ApiResponse.success(
         paymentUrl,

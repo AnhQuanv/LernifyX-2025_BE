@@ -64,12 +64,12 @@ export class PaymentService {
     @InjectRepository(CartItem) private cartRepo: Repository<CartItem>,
   ) {}
 
-  async handleVNPay(payment: Payment) {
+  async handleVNPay(payment: Payment, ipAddress?: string) {
     const vnPay = new VNPay({
       tmnCode: process.env.TMN_CODE!,
       secureSecret: process.env.HASH_SECRET!,
       vnpayHost: process.env.VNPAY_HOST!,
-      testMode: true,
+      testMode: process.env.NODE_ENV !== 'production',
       hashAlgorithm: HashAlgorithm.SHA512,
       loggerFn: ignoreLogger,
     });
@@ -79,7 +79,7 @@ export class PaymentService {
 
     const vnPayResponse = vnPay.buildPaymentUrl({
       vnp_Amount: payment.amount,
-      vnp_IpAddr: '127.0.0.1',
+      vnp_IpAddr: ipAddress || '127.0.0.1',
       vnp_TxnRef: payment.transaction_ref,
       vnp_OrderType: ProductCode.Other,
       vnp_OrderInfo: payment.order_info,
@@ -358,7 +358,7 @@ export class PaymentService {
     const orderId = payment.transaction_ref;
 
     const requestType = 'payWithMethod';
-    const amountWithTax = Math.round(payment.amount * 1.1);
+    const amountWithTax = Math.round(payment.amount);
     const amount = amountWithTax.toString();
     const orderInfo = `Thanh toan MoMo cho order ${orderId}`;
     const redirectUrl = process.env.MOMO_REDIRECT_URL!;
