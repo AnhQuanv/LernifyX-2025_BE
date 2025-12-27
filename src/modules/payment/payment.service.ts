@@ -64,42 +64,6 @@ export class PaymentService {
     @InjectRepository(CartItem) private cartRepo: Repository<CartItem>,
   ) {}
 
-  // async handleVNPay(payment: Payment, ipAddress?: string) {
-  //   const vnPay = new VNPay({
-  //     tmnCode: process.env.TMN_CODE!,
-  //     secureSecret: process.env.HASH_SECRET!,
-  //     vnpayHost: process.env.VNPAY_HOST!,
-  //     testMode: true,
-  //     hashAlgorithm: HashAlgorithm.SHA512,
-  //     loggerFn: ignoreLogger,
-  //   });
-
-  //   const now = new Date();
-  //   const expire = new Date(now.getTime() + 15 * 60 * 1000);
-
-  //   const vnPayResponse = vnPay.buildPaymentUrl({
-  //     vnp_Amount: payment.amount,
-  //     vnp_IpAddr: ipAddress || '127.0.0.1',
-  //     vnp_TxnRef: payment.transaction_ref,
-  //     vnp_OrderType: ProductCode.Other,
-  //     vnp_OrderInfo: payment.order_info,
-  //     vnp_ReturnUrl: process.env.VNPAY_RETURN_URL!,
-  //     vnp_Locale: VnpLocale.VN,
-  //     vnp_CreateDate: Number(formatDate(now)),
-  //     vnp_ExpireDate: Number(formatDate(expire)),
-  //   });
-
-  //   payment.pay_url = vnPayResponse;
-  //   await this.paymentRepo.save(payment);
-  //   console.log('PAYMENT_DEBUG:', {
-  //     amount: Math.floor(payment.amount * 100),
-  //     ip: ipAddress,
-  //     returnUrl: process.env.VNPAY_RETURN_URL,
-  //     tmnCode: process.env.TMN_CODE,
-  //   });
-  //   return vnPayResponse;
-  // }
-
   async handleVNPay(payment: Payment, ipAddress?: string) {
     const vnPay = new VNPay({
       tmnCode: process.env.TMN_CODE!,
@@ -111,40 +75,28 @@ export class PaymentService {
     });
 
     const now = new Date();
-    // VNPAY yêu cầu Expire ít nhất 15 phút sau Create
     const expire = new Date(now.getTime() + 15 * 60 * 1000);
 
-    const createDateStr = formatDate(now);
-    const expireDateStr = formatDate(expire);
-
-    // DEBUG: Kiểm tra giá trị thời gian và số tiền
-    console.log('--- VNPAY DEBUG START ---');
-    console.log('vnp_CreateDate Raw:', createDateStr);
-    console.log('vnp_ExpireDate Raw:', expireDateStr);
-    console.log('Original Amount:', payment.amount);
-    console.log(
-      'VNPAY Amount (x100):',
-      Math.floor(Number(payment.amount) * 100),
-    );
-    console.log('--- VNPAY DEBUG END ---');
-
     const vnPayResponse = vnPay.buildPaymentUrl({
-      vnp_Amount: Math.floor(Number(payment.amount) * 100), // BẮT BUỘC: Nhân 100 và lấy số nguyên
+      vnp_Amount: payment.amount,
       vnp_IpAddr: ipAddress || '127.0.0.1',
       vnp_TxnRef: payment.transaction_ref,
       vnp_OrderType: ProductCode.Other,
       vnp_OrderInfo: payment.order_info,
       vnp_ReturnUrl: process.env.VNPAY_RETURN_URL!,
       vnp_Locale: VnpLocale.VN,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      vnp_CreateDate: createDateStr as any,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      vnp_ExpireDate: expireDateStr as any,
+      vnp_CreateDate: Number(formatDate(now)),
+      vnp_ExpireDate: Number(formatDate(expire)),
     });
 
     payment.pay_url = vnPayResponse;
     await this.paymentRepo.save(payment);
-
+    console.log('PAYMENT_DEBUG:', {
+      amount: Math.floor(payment.amount * 100),
+      ip: ipAddress,
+      returnUrl: process.env.VNPAY_RETURN_URL,
+      tmnCode: process.env.TMN_CODE,
+    });
     return vnPayResponse;
   }
 
