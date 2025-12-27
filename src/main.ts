@@ -8,12 +8,6 @@ import * as express from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  setInterval(() => {
-    const memory = process.memoryUsage();
-    console.log(
-      `RAM: ${Math.round(memory.heapUsed / 1024 / 1024)} MB / Total: ${Math.round(memory.heapTotal / 1024 / 1024)} MB`,
-    );
-  }, 5000);
   app.use(
     express.json({
       verify: (req: any, _, buf, __) => {

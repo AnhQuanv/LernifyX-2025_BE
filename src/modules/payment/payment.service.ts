@@ -152,7 +152,7 @@ export class PaymentService {
       tmnCode: process.env.TMN_CODE!,
       secureSecret: process.env.HASH_SECRET!,
       vnpayHost: process.env.VNPAY_HOST!,
-      testMode: true,
+      testMode: process.env.NODE_ENV !== 'production',
       hashAlgorithm: HashAlgorithm.SHA512,
       loggerFn: ignoreLogger,
     });
