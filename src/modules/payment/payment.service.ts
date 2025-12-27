@@ -91,7 +91,12 @@ export class PaymentService {
 
     payment.pay_url = vnPayResponse;
     await this.paymentRepo.save(payment);
-
+    console.log('PAYMENT_DEBUG:', {
+      amount: Math.floor(payment.amount * 100),
+      ip: ipAddress,
+      returnUrl: process.env.VNPAY_RETURN_URL,
+      tmnCode: process.env.TMN_CODE,
+    });
     return vnPayResponse;
   }
 
