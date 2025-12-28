@@ -76,9 +76,7 @@ export class MuxController {
     @Headers('mux-signature') muxSignature: string,
     @Req() req: Request,
   ) {
-    const secret = this.configService.get<string>('MUX_WEBHOOK_SECRET_NEW'); // 1. LẤY RAW BODY ĐƯỢC LƯU TỪ main.ts
-    // Sử dụng `as any` để truy cập thuộc tính `rawBody` đã được thêm vào
-
+    const secret = this.configService.get<string>('MUX_WEBHOOK_SECRET_NEW');
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const rawBodyBuffer: Buffer = (req as any).rawBody;
 
@@ -86,8 +84,7 @@ export class MuxController {
       console.error('Raw Body không tồn tại. Lỗi cấu hình Express.');
       throw new UnauthorizedException('Yêu cầu Webhook không hợp lệ.');
     }
-    const rawBodyString = rawBodyBuffer.toString('utf8'); // console.log('muxSignature: ', muxSignature); // Log không cần thiết
-    // console.log('req: ', req); // Log req quá lớn, nên bỏ
+    const rawBodyString = rawBodyBuffer.toString('utf8');
     // 2. THỰC HIỆN XÁC THỰC
 
     if (secret && muxSignature) {

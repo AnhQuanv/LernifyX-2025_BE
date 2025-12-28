@@ -28,6 +28,7 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
   app.useGlobalFilters(new GlobalExceptionFilter());
   app.use(cookieParser());
   app.enableCors({
