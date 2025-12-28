@@ -43,6 +43,7 @@ import { LessonVideoModule } from './modules/lesson_video/lesson_video.module';
 import { LessonVideo } from './modules/lesson_video/entities/lesson_video.entity';
 import { ProgressModule } from './progress/progress.module';
 import { MuxModule } from './modules/mux/mux.module';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -101,10 +102,11 @@ import { MuxModule } from './modules/mux/mux.module';
         defaults: {
           from: `"No Reply" <${config.get<string>('MAIL_FROM')}>`,
         },
-        preview: true,
+        preview: config.get<string>('NODE_ENV') !== 'production',
         template: {
-          dir: process.cwd() + '/src/mail/templates/',
-          adapter: new HandlebarsAdapter(), // or new PugAdapter() or new EjsAdapter()
+          // dir: process.cwd() + '/src/mail/templates/',
+          dir: join(__dirname, 'templates'),
+          adapter: new HandlebarsAdapter(),
           options: {
             strict: true,
           },

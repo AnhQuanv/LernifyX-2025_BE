@@ -10,8 +10,9 @@ import {
 import { Server, Socket } from 'socket.io';
 
 @WebSocketGateway({
+  path: '/socket.io',
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    origin: process.env.CLIENT_URL || 'http://localhost:10000',
     methods: ['GET', 'POST'],
     credentials: true,
   },
