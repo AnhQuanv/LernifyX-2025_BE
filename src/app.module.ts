@@ -91,8 +91,8 @@ import { join } from 'path';
       useFactory: (config: ConfigService) => ({
         transport: {
           host: config.get<string>('MAIL_HOST'),
-          port: 587,
-          secure: false,
+          port: 465,
+          secure: true,
           auth: {
             user: config.get<string>('MAIL_USER'),
             pass: config.get<string>('MAIL_PASS'),
