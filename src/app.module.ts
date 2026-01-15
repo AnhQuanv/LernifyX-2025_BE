@@ -91,8 +91,8 @@ import { join } from 'path';
       useFactory: (config: ConfigService) => ({
         transport: {
           host: config.get<string>('MAIL_HOST'),
-          port: 465,
-          secure: true,
+          port: config.get<string>('MAIL_PORT'),
+          secure: false,
           auth: {
             user: config.get<string>('MAIL_USER'),
             pass: config.get<string>('MAIL_PASS'),
@@ -104,7 +104,7 @@ import { join } from 'path';
           logger: true,
         },
         defaults: {
-          from: `"No Reply" <${config.get<string>('MAIL_FROM')}>`,
+          from: '"LearnifyX" <banhkute200@gmail.com>',
         },
         preview: config.get<string>('NODE_ENV') !== 'production',
         template: {
@@ -117,40 +117,6 @@ import { join } from 'path';
       }),
       inject: [ConfigService],
     }),
-    // MailerModule.forRootAsync({
-    //   useFactory: (config: ConfigService) => ({
-    //     transport: {
-    //       host: config.get<string>('MAIL_HOST'), // smtp.gmail.com
-    //       port: 587, // 587
-    //       secure: false, // Port 587 luôn đi với false
-    //       auth: {
-    //         user: config.get<string>('MAIL_USER'),
-    //         pass: config.get<string>('MAIL_PASS'),
-    //       },
-    //       // --- PHẦN QUAN TRỌNG ĐỂ FIX TIMEOUT TRÊN RENDER ---
-    //       family: 4, // Ép buộc dùng IPv4 (Render rất hay lỗi IPv6 với Gmail)
-    //       connectionTimeout: 30000, // Tăng thời gian chờ kết nối lên 30s
-    //       greetingTimeout: 30000, // Thời gian chờ lời chào từ SMTP
-    //       socketTimeout: 30000, // Thời gian chờ socket phản hồi
-    //       // --------------------------------------------------
-    //       tls: {
-    //         rejectUnauthorized: false,
-    //       },
-    //     },
-    //     defaults: {
-    //       from: `"No Reply" <${config.get<string>('MAIL_USER')}>`,
-    //     },
-    //     template: {
-    //       dir: join(__dirname, 'mail', 'templates'),
-    //       adapter: new HandlebarsAdapter(),
-    //       options: {
-    //         strict: true,
-    //       },
-    //     },
-    //   }),
-    //   inject: [ConfigService],
-    // }),
-
     CourseModule,
     CategoryModule,
     WishlistModule,
