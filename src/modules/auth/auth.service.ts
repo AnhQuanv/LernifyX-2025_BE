@@ -366,6 +366,7 @@ export class AuthService {
       return { success: true };
     }
   }
+
   async handleSendVerifyMail(email: string) {
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) {

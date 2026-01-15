@@ -115,13 +115,19 @@ import { join } from 'path';
     MailerModule.forRootAsync({
       useFactory: (config: ConfigService) => ({
         transport: {
-          host: config.get<string>('MAIL_HOST'),
-          port: config.get<number>('MAIL_PORT'),
-          secure: config.get<number>('MAIL_PORT') === 465,
+          host: config.get<string>('MAIL_HOST'), // smtp.gmail.com
+          port: config.get<number>('MAIL_PORT'), // 587
+          secure: false, // Port 587 luôn đi với false
           auth: {
             user: config.get<string>('MAIL_USER'),
             pass: config.get<string>('MAIL_PASS'),
           },
+          // --- PHẦN QUAN TRỌNG ĐỂ FIX TIMEOUT TRÊN RENDER ---
+          family: 4, // Ép buộc dùng IPv4 (Render rất hay lỗi IPv6 với Gmail)
+          connectionTimeout: 30000, // Tăng thời gian chờ kết nối lên 30s
+          greetingTimeout: 30000, // Thời gian chờ lời chào từ SMTP
+          socketTimeout: 30000, // Thời gian chờ socket phản hồi
+          // --------------------------------------------------
           tls: {
             rejectUnauthorized: false,
           },
@@ -129,8 +135,8 @@ import { join } from 'path';
         defaults: {
           from: `"No Reply" <${config.get<string>('MAIL_USER')}>`,
         },
-        preview: config.get<string>('NODE_ENV') !== 'production',
         template: {
+          // Sử dụng process.cwd() để đường dẫn template luôn đúng trên Production
           dir: join(__dirname, 'mail', 'templates'),
           adapter: new HandlebarsAdapter(),
           options: {
