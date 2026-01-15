@@ -87,54 +87,26 @@ import { join } from 'path';
     CategoryModule,
     RefreshTokenModule,
     CommentModule,
-    // MailerModule.forRootAsync({
-    //   useFactory: (config: ConfigService) => ({
-    //     transport: {
-    //       host: config.get<string>('MAIL_HOST'),
-    //       port: config.get<number>('MAIL_PORT'),
-    //       secure: true,
-    //       auth: {
-    //         user: config.get<string>('MAIL_USER'),
-    //         pass: config.get<string>('MAIL_PASS'),
-    //       },
-    //     },
-    //     defaults: {
-    //       from: `"No Reply" <${config.get<string>('MAIL_FROM')}>`,
-    //     },
-    //     preview: config.get<string>('NODE_ENV') !== 'production',
-    //     template: {
-    //       dir: join(__dirname, 'mail', 'templates'),
-    //       adapter: new HandlebarsAdapter(),
-    //       options: {
-    //         strict: true,
-    //       },
-    //     },
-    //   }),
-    //   inject: [ConfigService],
-    // }),
     MailerModule.forRootAsync({
       useFactory: (config: ConfigService) => ({
         transport: {
-          host: config.get<string>('MAIL_HOST'), // smtp.gmail.com
-          port: 587, // 587
-          secure: false, // Port 587 luôn đi với false
+          host: config.get<string>('MAIL_HOST'),
+          port: config.get<number>('MAIL_PORT'),
+          secure: true,
           auth: {
             user: config.get<string>('MAIL_USER'),
             pass: config.get<string>('MAIL_PASS'),
           },
-          // --- PHẦN QUAN TRỌNG ĐỂ FIX TIMEOUT TRÊN RENDER ---
-          family: 4, // Ép buộc dùng IPv4 (Render rất hay lỗi IPv6 với Gmail)
-          connectionTimeout: 30000, // Tăng thời gian chờ kết nối lên 30s
-          greetingTimeout: 30000, // Thời gian chờ lời chào từ SMTP
-          socketTimeout: 30000, // Thời gian chờ socket phản hồi
-          // --------------------------------------------------
-          tls: {
-            rejectUnauthorized: false,
-          },
         },
+        tls: {
+          rejectUnauthorized: false,
+        },
+        debug: true,
+        logger: true,
         defaults: {
-          from: `"No Reply" <${config.get<string>('MAIL_USER')}>`,
+          from: `"No Reply" <${config.get<string>('MAIL_FROM')}>`,
         },
+        preview: config.get<string>('NODE_ENV') !== 'production',
         template: {
           dir: join(__dirname, 'mail', 'templates'),
           adapter: new HandlebarsAdapter(),
@@ -145,6 +117,39 @@ import { join } from 'path';
       }),
       inject: [ConfigService],
     }),
+    // MailerModule.forRootAsync({
+    //   useFactory: (config: ConfigService) => ({
+    //     transport: {
+    //       host: config.get<string>('MAIL_HOST'), // smtp.gmail.com
+    //       port: 587, // 587
+    //       secure: false, // Port 587 luôn đi với false
+    //       auth: {
+    //         user: config.get<string>('MAIL_USER'),
+    //         pass: config.get<string>('MAIL_PASS'),
+    //       },
+    //       // --- PHẦN QUAN TRỌNG ĐỂ FIX TIMEOUT TRÊN RENDER ---
+    //       family: 4, // Ép buộc dùng IPv4 (Render rất hay lỗi IPv6 với Gmail)
+    //       connectionTimeout: 30000, // Tăng thời gian chờ kết nối lên 30s
+    //       greetingTimeout: 30000, // Thời gian chờ lời chào từ SMTP
+    //       socketTimeout: 30000, // Thời gian chờ socket phản hồi
+    //       // --------------------------------------------------
+    //       tls: {
+    //         rejectUnauthorized: false,
+    //       },
+    //     },
+    //     defaults: {
+    //       from: `"No Reply" <${config.get<string>('MAIL_USER')}>`,
+    //     },
+    //     template: {
+    //       dir: join(__dirname, 'mail', 'templates'),
+    //       adapter: new HandlebarsAdapter(),
+    //       options: {
+    //         strict: true,
+    //       },
+    //     },
+    //   }),
+    //   inject: [ConfigService],
+    // }),
 
     CourseModule,
     CategoryModule,
