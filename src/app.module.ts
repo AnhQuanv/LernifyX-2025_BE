@@ -97,12 +97,12 @@ import { join } from 'path';
             user: config.get<string>('MAIL_USER'),
             pass: config.get<string>('MAIL_PASS'),
           },
+          tls: {
+            rejectUnauthorized: false,
+          },
+          debug: true,
+          logger: true,
         },
-        tls: {
-          rejectUnauthorized: false,
-        },
-        debug: true,
-        logger: true,
         defaults: {
           from: `"No Reply" <${config.get<string>('MAIL_FROM')}>`,
         },
