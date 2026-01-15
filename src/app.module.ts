@@ -131,7 +131,7 @@ import { join } from 'path';
         },
         preview: config.get<string>('NODE_ENV') !== 'production',
         template: {
-          dir: join(process.cwd(), 'dist', 'mail', 'templates'),
+          dir: join(__dirname, 'mail', 'templates'),
           adapter: new HandlebarsAdapter(),
           options: {
             strict: true,
