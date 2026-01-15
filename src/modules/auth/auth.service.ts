@@ -336,35 +336,31 @@ export class AuthService {
 
     // --- PHẦN DEBUG QUAN TRỌNG ---
     try {
-      // Không nên 'await' nếu bạn muốn FE nhận phản hồi ngay lập tức
-      // và chấp nhận việc mail gửi ngầm (background)
-      this.mailerService
-        .sendMail({
-          to: savedUser.email,
-          subject: 'Reset your LearnifyX password',
-          template: 'reset-password.hbs',
-          context: {
-            name: savedUser.fullName,
-            otpCode: codeId,
-            expiresAtFormatted: codeExpiresAt.format(
-              'HH:mm:ss [on] DD/MM/YYYY',
-            ),
-          },
-        })
-        .catch((mailError) => {
-          // Log lỗi mail nhưng không chặn luồng chính
-          console.error('❌ Background Mail Error:', mailError.message);
-        });
+      console.log(`🚀 Bắt đầu gửi mail tới: ${savedUser.email}...`);
 
-      console.log(`✅ Đã yêu cầu gửi OTP tới ${savedUser.email}`);
+      // Tạm thời để await để xem nó timeout mất bao lâu và lỗi chính xác là gì
+      await this.mailerService.sendMail({
+        to: savedUser.email,
+        subject: 'Reset your LearnifyX password',
+        template: 'reset-password', // Lưu ý: Thường không cần đuôi .hbs nếu đã cấu hình trong Module
+        context: {
+          name: savedUser.fullName,
+          otpCode: codeId,
+          expiresAtFormatted: codeExpiresAt.format('HH:mm:ss [on] DD/MM/YYYY'),
+        },
+      });
 
-      // Luôn trả về kết quả thành công cho Controller sau khi đã lưu DB
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Lỗi xử lý tại handlePasswordForget:', error);
-      // Vẫn trả về thành công nếu DB đã lưu xong, vì OTP đã nằm trong DB
-      return { success: true };
+      console.log(`✅ Mail đã gửi thành công tới ${savedUser.email}`);
+    } catch (mailError) {
+      // In toàn bộ object lỗi để xem code lỗi (ETIMEOUT, EAUTH, v.v.)
+      console.error('❌ Lỗi Mail Chi Tiết:', {
+        message: mailError.message,
+        code: mailError.code,
+        command: mailError.command,
+      });
     }
+
+    return { success: true };
   }
 
   async handleSendVerifyMail(email: string) {
