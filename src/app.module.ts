@@ -87,24 +87,51 @@ import { join } from 'path';
     CategoryModule,
     RefreshTokenModule,
     CommentModule,
+    // MailerModule.forRootAsync({
+    //   useFactory: (config: ConfigService) => ({
+    //     transport: {
+    //       host: config.get<string>('MAIL_HOST'),
+    //       port: config.get<number>('MAIL_PORT'),
+    //       secure: true,
+    //       auth: {
+    //         user: config.get<string>('MAIL_USER'),
+    //         pass: config.get<string>('MAIL_PASS'),
+    //       },
+    //     },
+    //     defaults: {
+    //       from: `"No Reply" <${config.get<string>('MAIL_FROM')}>`,
+    //     },
+    //     preview: config.get<string>('NODE_ENV') !== 'production',
+    //     template: {
+    //       dir: join(__dirname, 'mail', 'templates'),
+    //       adapter: new HandlebarsAdapter(),
+    //       options: {
+    //         strict: true,
+    //       },
+    //     },
+    //   }),
+    //   inject: [ConfigService],
+    // }),
     MailerModule.forRootAsync({
       useFactory: (config: ConfigService) => ({
         transport: {
           host: config.get<string>('MAIL_HOST'),
           port: config.get<number>('MAIL_PORT'),
-          secure: true,
+          secure: config.get<number>('MAIL_PORT') === 465,
           auth: {
             user: config.get<string>('MAIL_USER'),
             pass: config.get<string>('MAIL_PASS'),
           },
+          tls: {
+            rejectUnauthorized: false,
+          },
         },
         defaults: {
-          from: `"No Reply" <${config.get<string>('MAIL_FROM')}>`,
+          from: `"No Reply" <${config.get<string>('MAIL_USER')}>`,
         },
         preview: config.get<string>('NODE_ENV') !== 'production',
         template: {
-          // dir: process.cwd() + '/src/mail/templates/',
-          dir: join(__dirname, 'mail', 'templates'),
+          dir: join(process.cwd(), 'dist', 'mail', 'templates'),
           adapter: new HandlebarsAdapter(),
           options: {
             strict: true,

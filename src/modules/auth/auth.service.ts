@@ -157,7 +157,60 @@ export class AuthService {
     }
   }
 
+  // async handleRegister(registerDto: RegisterDtoAdmin) {
+  //   const user = await this.userRepository.findOne({
+  //     where: { email: registerDto.email },
+  //   });
+  //   if (user) {
+  //     throw new BadRequestException({
+  //       message: 'Email đã tồn tại',
+  //       errorCode: 'EMAIL_EXISTS',
+  //     });
+  //   }
+
+  //   const hashedPassword = await bcrypt.hash(registerDto.password, 10);
+
+  //   const role = await this.roleRepository.findOne({
+  //     where: { roleName: registerDto.roleName },
+  //   });
+
+  //   if (!role) {
+  //     throw new NotFoundException({
+  //       message: 'Role không tồn tại',
+  //       errorCode: 'RESOURCE_NOT_FOUND',
+  //     });
+  //   }
+
+  //   const codeId = Math.floor(100000 + Math.random() * 900000);
+  //   const codeExpiresAt = dayjs().add(5, 'minute');
+
+  //   const newUser = this.userRepository.create({
+  //     email: registerDto.email,
+  //     password: hashedPassword,
+  //     fullName: registerDto.fullName,
+  //     dateOfBirth:
+  //       registerDto.dateOfBirth === '' ? null : registerDto.dateOfBirth,
+  //     phone: registerDto.phone,
+  //     address: registerDto.address,
+  //     role,
+  //     codeId,
+  //     codeExpiresAt: codeExpiresAt.toDate(),
+  //   });
+
+  //   const savedUser = await this.userRepository.save(newUser);
+  //   await this.mailerService.sendMail({
+  //     to: savedUser.email,
+  //     subject: 'Activate your LearnifyX account',
+  //     template: 'verify.hbs',
+  //     context: {
+  //       name: savedUser.fullName,
+  //       activationCode: codeId,
+  //       expiresAtFormatted: codeExpiresAt.format('HH:mm:ss [on] DD/MM/YYYY'),
+  //     },
+  //   });
+  // }
   async handleRegister(registerDto: RegisterDtoAdmin) {
+    // 1. Kiểm tra tồn tại
     const user = await this.userRepository.findOne({
       where: { email: registerDto.email },
     });
@@ -168,8 +221,8 @@ export class AuthService {
       });
     }
 
+    // 2. Chuẩn bị dữ liệu
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
-
     const role = await this.roleRepository.findOne({
       where: { roleName: registerDto.roleName },
     });
@@ -184,6 +237,7 @@ export class AuthService {
     const codeId = Math.floor(100000 + Math.random() * 900000);
     const codeExpiresAt = dayjs().add(5, 'minute');
 
+    // 3. Tạo User
     const newUser = this.userRepository.create({
       email: registerDto.email,
       password: hashedPassword,
@@ -198,16 +252,30 @@ export class AuthService {
     });
 
     const savedUser = await this.userRepository.save(newUser);
-    await this.mailerService.sendMail({
-      to: savedUser.email,
-      subject: 'Activate your LearnifyX account',
-      template: 'verify.hbs',
-      context: {
-        name: savedUser.fullName,
-        activationCode: codeId,
-        expiresAtFormatted: codeExpiresAt.format('HH:mm:ss [on] DD/MM/YYYY'),
-      },
-    });
+
+    // 4. Gửi Mail (DEBUG: Bọc trong try-catch để tránh treo request)
+    try {
+      await this.mailerService.sendMail({
+        to: savedUser.email,
+        subject: 'Activate your LearnifyX account',
+        template: 'verify.hbs',
+        context: {
+          name: savedUser.fullName,
+          activationCode: codeId,
+          expiresAtFormatted: codeExpiresAt.format('HH:mm:ss [on] DD/MM/YYYY'),
+        },
+      });
+      console.log(`✅ Mail đã gửi thành công tới: ${savedUser.email}`);
+    } catch (error) {
+      // Nếu mail lỗi, chúng ta log lại để sửa BE nhưng vẫn trả về success cho FE
+      // Hoặc throw ra một lỗi rõ ràng hơn để FE xử lý
+      console.error('❌ LỖI GỬI MAIL TRÊN PRODUCTION:', error);
+
+      // Tùy chọn: Nếu muốn người dùng biết mail lỗi nhưng tài khoản vẫn được tạo
+      // return { message: 'Tạo tài khoản thành công nhưng gửi mail lỗi' };
+    }
+
+    return savedUser; // Trả về để Controller trả về 201 cho Frontend
   }
 
   async handleVerifyMail(email: string, codeId: number) {

@@ -33,6 +33,7 @@ async function bootstrap() {
   app.use(cookieParser());
   app.enableCors({
     origin: [
+      'https://lernify-x-2025-fe.vercel.app',
       'http://localhost:3000',
       'http://192.168.11.1:3000',
       process.env.CLIENT_URL,
