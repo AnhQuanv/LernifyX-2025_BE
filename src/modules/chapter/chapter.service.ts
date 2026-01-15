@@ -34,7 +34,6 @@ export class ChapterService {
         `Không tìm thấy khóa học với ID "${courseId}".`,
       );
     }
-    console.log('userId và intructor: ', userId, course.instructor.userId);
     if (course.instructor.userId !== userId) {
       throw new ForbiddenException(
         'Bạn không có quyền thêm chương cho khóa học này.',
@@ -58,7 +57,6 @@ export class ChapterService {
   }
 
   async handleUpdateChapter(dto: UpdateChapterDto, userId: string) {
-    console.log('dto và userId: ', dto, userId);
     const { id: chapterId, ...updateData } = dto;
     const chapter = await this.chapterRepository.findOne({
       where: { id: chapterId },
@@ -69,11 +67,6 @@ export class ChapterService {
         `Không tìm thấy chương với ID "${chapterId}".`,
       );
     }
-    console.log(
-      'userId và intructor: ',
-      userId,
-      chapter.course.instructor.userId,
-    );
 
     if (chapter.course.instructor.userId !== userId) {
       throw new ForbiddenException(

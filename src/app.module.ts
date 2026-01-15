@@ -41,7 +41,6 @@ import { UserPreferencesModule } from './modules/user_preferences/user_preferenc
 import { UserPreference } from './modules/user_preferences/entities/user_preference.entity';
 import { LessonVideoModule } from './modules/lesson_video/lesson_video.module';
 import { LessonVideo } from './modules/lesson_video/entities/lesson_video.entity';
-import { ProgressModule } from './progress/progress.module';
 import { MuxModule } from './modules/mux/mux.module';
 import { join } from 'path';
 
@@ -105,7 +104,7 @@ import { join } from 'path';
         preview: config.get<string>('NODE_ENV') !== 'production',
         template: {
           // dir: process.cwd() + '/src/mail/templates/',
-          dir: join(__dirname, 'templates'),
+          dir: join(__dirname, 'mail', 'templates'),
           adapter: new HandlebarsAdapter(),
           options: {
             strict: true,
@@ -130,7 +129,6 @@ import { join } from 'path';
     LessonNoteModule,
     UserPreferencesModule,
     LessonVideoModule,
-    ProgressModule,
     MuxModule,
   ],
   controllers: [],

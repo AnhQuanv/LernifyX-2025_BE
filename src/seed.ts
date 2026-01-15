@@ -5,10 +5,8 @@ import { seedLessonProgress } from '../typeorm/seeds/lesson-progress.seed';
 import { seedLessonCommentsWithRandomUsers } from '../typeorm/seeds/commentLesson.seed';
 import { seedQuiz } from '../typeorm/seeds/quiz.seed';
 import { seedUserPreferences } from '../typeorm/seeds/user-preference.seed';
-import { paymentSeed } from '../typeorm/seeds/payment.seed';
-import { seedLessonProgressForBuyers } from '../typeorm/seeds/lesson-progress-for-buyer.seed';
-import { seedLessonCommentsForBuyers } from '../typeorm/seeds/comment-lesson-for-Buyer.seed';
 import { seedCourses1 } from '../typeorm/seeds/course1.seed';
+import { paymentSeedFor12Month } from '../typeorm/seeds/payment-random-12-months.seed';
 
 const runSeed = async () => {
   try {
@@ -17,16 +15,12 @@ const runSeed = async () => {
 
     await seedRoles(dataSource);
     await seedUsers(dataSource);
-    // await seedCategories(dataSource);
-    // await seedCourses(dataSource);
     await seedCourses1(dataSource);
     await seedLessonProgress(dataSource);
     await seedLessonCommentsWithRandomUsers(dataSource);
     await seedQuiz(dataSource);
     await seedUserPreferences(dataSource);
-    await paymentSeed(dataSource);
-    await seedLessonProgressForBuyers(dataSource);
-    await seedLessonCommentsForBuyers(dataSource);
+    await paymentSeedFor12Month(dataSource);
     await dataSource.destroy();
     console.log('🧹 DataSource closed');
   } catch (error) {

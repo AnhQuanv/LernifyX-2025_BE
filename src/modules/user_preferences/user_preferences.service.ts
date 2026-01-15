@@ -470,9 +470,9 @@ export class UserPreferencesService {
         //   0.05 * (course.levelScore || 0);
 
         const totalScore =
-          Math.sqrt(score) * 0.8 +
-          0.05 * finalStudentScore +
-          0.05 * ratingScore +
+          Math.sqrt(score) * 0.5 +
+          0.2 * finalStudentScore +
+          0.2 * ratingScore +
           0.05 * discountScore +
           0.05 * (course.levelScore || 0);
 
@@ -484,17 +484,6 @@ export class UserPreferencesService {
       .sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0))
       .slice(0, topN);
 
-    // console.table(
-    //   topCourses.map((c, index) => ({
-    //     Hạng: index + 1,
-    //     'Tiêu đề': c.title.substring(0, 40) + '...',
-    //     'Phù hợp (%)': ((c.totalScore ?? 0) * 100).toFixed(2) + '%',
-    //     'Số HV': c.students,
-    //     Rating: c.rating,
-    //     'Giảm giá': (c.discount || 0) + '%',
-    //     'NLP Score': Math.sqrt(c.score ?? 0).toFixed(2),
-    //   })),
-    // );
     const formatted = plainToInstance(CourseDto, topCourses, {
       excludeExtraneousValues: true,
     }).map((course) => ({

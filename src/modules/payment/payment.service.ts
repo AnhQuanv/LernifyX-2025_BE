@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Payment } from './entities/payment.entity';
-import { Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 import { PaymentItem } from '../payment_items/entities/payment_item.entity';
 import { Course } from '../course/entities/course.entity';
 import {
@@ -17,7 +17,7 @@ import {
   VNPay,
   VnpLocale,
 } from 'vnpay';
-import { formatDate } from 'src/common/helpers/utils';
+import { applyTimeFilter, formatDate } from 'src/common/helpers/utils';
 import { Response } from 'express';
 import {
   MoMoCreateResponse,
@@ -34,22 +34,43 @@ import { CartItem } from '../cart_item/entities/cart_item.entity';
 interface MonthlyRevenueResult {
   monthYear: string;
   totalNetRevenue: string;
+  gmv: string;
+}
+
+export interface DailyRevenueResult {
+  paidDate: string;
+  totalNetRevenue: string | number;
+  totalGmv: string | number;
+  newStudents: string | number;
 }
 
 export interface MonthlyRevenueData {
   name: string;
   revenue: number;
+  gmv: number;
+}
+
+interface RawTopCourse {
+  name: string;
+  revenue: string | number;
+}
+
+interface RawTopCategory {
+  name: string;
+  revenue: string | number;
 }
 
 export interface WeeklyRevenueItem {
   dayOfWeek: string;
   date: string;
   totalNetRevenue: number;
+  totalGmv: number;
+  newStudents: number;
 }
 
-interface DailyRevenueResult {
-  paidDate: string;
-  totalNetRevenue: string;
+interface RawStatsResult {
+  gmv: string | number | null;
+  newStudents: string | number | null;
 }
 
 const PLATFORM_FEE_RATE = 0.1;
@@ -91,12 +112,7 @@ export class PaymentService {
 
     payment.pay_url = vnPayResponse;
     await this.paymentRepo.save(payment);
-    console.log('PAYMENT_DEBUG:', {
-      amount: Math.floor(payment.amount * 100),
-      ip: ipAddress,
-      returnUrl: process.env.VNPAY_RETURN_URL,
-      tmnCode: process.env.TMN_CODE,
-    });
+
     return vnPayResponse;
   }
 
@@ -269,22 +285,12 @@ export class PaymentService {
         .execute();
 
       for (const item of payment.items) {
-        console.log(`Updating students for course: ${item.course.id}`);
-
-        const updateResult = await this.courseRepo
+        await this.courseRepo
           .createQueryBuilder()
           .update(Course)
           .set({ students: () => 'students + 1' })
           .where('id = :id', { id: item.course.id })
           .execute();
-
-        console.log('Course update result:', updateResult);
-
-        const updatedCourse = await this.courseRepo.findOne({
-          where: { id: item.course.id },
-        });
-
-        console.log('Updated course students:', updatedCourse?.students);
       }
     }
     return payment;
@@ -369,8 +375,6 @@ export class PaymentService {
     const redirectUrl = process.env.MOMO_REDIRECT_URL!;
     const ipnUrl = process.env.MOMO_IPN_URL!;
     const extraData = '';
-    console.log('MoMo Payment Amount:', amount);
-    console.log('Raw payment.amount:', payment.amount);
     const rawSignature =
       `accessKey=${accessKey}` +
       `&amount=${amount}` +
@@ -466,8 +470,7 @@ export class PaymentService {
     if (payment.status === 'success') {
       const userId = payment.user.userId;
 
-      // Xóa khỏi wishlist
-      const wishlistDeleteResult = await this.wishlistRepo
+      await this.wishlistRepo
         .createQueryBuilder()
         .delete()
         .where('user_id = :userId', { userId })
@@ -475,8 +478,7 @@ export class PaymentService {
           courseIds: payment.items.map((i) => i.course.id),
         })
         .execute();
-      console.log('Wishlist delete result:', wishlistDeleteResult);
-      const cartUpdateResult = await this.cartRepo
+      await this.cartRepo
         .createQueryBuilder()
         .update(CartItem)
         .set({ isPurchased: true })
@@ -485,26 +487,15 @@ export class PaymentService {
           courseIds: payment.items.map((i) => i.course.id),
         })
         .execute();
-      console.log('Cart update result:', cartUpdateResult);
 
       for (const item of payment.items) {
         const courseId = item.course.id;
-        console.log(`Updating students for course: ${courseId}`);
-
-        const updateResult = await this.courseRepo
+        await this.courseRepo
           .createQueryBuilder()
           .update(Course)
           .set({ students: () => 'students + 1' })
           .where('id = :id', { id: courseId })
           .execute();
-
-        console.log('Course update result:', updateResult);
-
-        // Debug xem giá trị mới
-        const newCourse = await this.courseRepo.findOne({
-          where: { id: courseId },
-        });
-        console.log('Updated course students:', newCourse?.students);
       }
     }
 
@@ -584,18 +575,15 @@ export class PaymentService {
     };
   }
 
-  private initializeRevenueArray(count: number): MonthlyRevenueData[] {
+  private initializeRevenueArray(year: number): MonthlyRevenueData[] {
     const data: MonthlyRevenueData[] = [];
-    const today = new Date();
 
-    for (let i = count - 1; i >= 0; i--) {
-      const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
-      const month = date.getMonth() + 1;
-      const year = date.getFullYear();
+    for (let month = 1; month <= 12; month++) {
       const monthName = `${month}/${year}`;
       data.push({
         name: monthName,
         revenue: 0,
+        gmv: 0,
       });
     }
     return data;
@@ -603,9 +591,10 @@ export class PaymentService {
 
   private formatRevenueData(
     rawResults: MonthlyRevenueResult[],
-    count: number,
+    year: number,
   ): MonthlyRevenueData[] {
-    const initializedArray = this.initializeRevenueArray(count);
+    const initializedArray = this.initializeRevenueArray(year);
+
     const monthlyDataMap = initializedArray.reduce(
       (map, item) => {
         map[item.name] = item;
@@ -613,38 +602,35 @@ export class PaymentService {
       },
       {} as Record<string, MonthlyRevenueData>,
     );
+
     for (const raw of rawResults) {
       const [yearStr, monthStr] = raw.monthYear.split('-');
       const month = parseInt(monthStr);
-      const year = parseInt(yearStr);
-      const monthKey = `${month}/${year}`;
+      const monthKey = `${month}/${parseInt(yearStr)}`;
 
       if (monthlyDataMap[monthKey]) {
-        monthlyDataMap[monthKey].revenue = parseFloat(raw.totalNetRevenue);
+        monthlyDataMap[monthKey].revenue = parseFloat(raw.totalNetRevenue) || 0;
+        monthlyDataMap[monthKey].gmv = parseFloat(raw.gmv) || 0;
       }
     }
+
     return Object.values(monthlyDataMap);
   }
 
-  async handelGetTeacherPayments(teacherId: string) {
+  async handelGetTeacherPayments(teacherId: string, year: number) {
     const teacherCourses = await this.courseRepo.find({
       select: ['id'],
-      where: {
-        instructor: { userId: teacherId },
-        status: 'published',
-      },
-      relations: ['instructor'],
+      where: { instructor: { userId: teacherId } },
     });
 
     if (!teacherCourses || teacherCourses.length === 0) {
-      return this.initializeRevenueArray(12);
+      return this.initializeRevenueArray(year);
     }
 
     const teacherCourseIds = teacherCourses.map((c) => c.id);
 
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setFullYear(endDate.getFullYear(), endDate.getMonth() - 11, 1); // Đặt về ngày 1 của tháng 12 trước
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year, 11, 31, 23, 59, 59);
 
     const revenueResults: MonthlyRevenueResult[] = await this.paymentItemRepo
       .createQueryBuilder('item')
@@ -654,17 +640,19 @@ export class PaymentService {
       .where('item.course_id IN (:...courseIds)', {
         courseIds: teacherCourseIds,
       })
-      .andWhere('payment.paid_at >= :startDate', {
+      .andWhere('payment.paid_at BETWEEN :startDate AND :endDate', {
         startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
       })
       .select("DATE_FORMAT(payment.paid_at, '%Y-%m')", 'monthYear')
       .addSelect(`SUM(item.price * (1 - :feeRate))`, 'totalNetRevenue')
+      .addSelect(`SUM(item.price)`, 'gmv')
       .setParameter('feeRate', PLATFORM_FEE_RATE)
       .groupBy('monthYear')
       .orderBy('monthYear', 'ASC')
       .getRawMany();
 
-    return this.formatRevenueData(revenueResults, 12);
+    return this.formatRevenueData(revenueResults, year);
   }
 
   private formatRevenueByDayOfWeek(
@@ -672,11 +660,21 @@ export class PaymentService {
     startDate: Date,
     endDate: Date,
   ) {
-    const revenueMap = new Map<string, number>();
+    const statsMap = new Map<
+      string,
+      { net: number; gmv: number; students: number }
+    >();
 
     revenueResults.forEach((result) => {
-      const netRevenue = parseFloat(result.totalNetRevenue) || 0;
-      revenueMap.set(result.paidDate, netRevenue);
+      const netRevenue = parseFloat(String(result.totalNetRevenue)) || 0;
+      const gmv = parseFloat(String(result.totalGmv)) || 0;
+      const newStudents = parseInt(String(result.newStudents)) || 0;
+
+      statsMap.set(result.paidDate, {
+        net: netRevenue,
+        gmv: gmv,
+        students: newStudents,
+      });
     });
 
     const rawData: WeeklyRevenueItem[] = [];
@@ -696,36 +694,37 @@ export class PaymentService {
       const yyyy = currentDate.getFullYear();
       const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
       const dd = String(currentDate.getDate()).padStart(2, '0');
-      const dateKey = `${yyyy}-${mm}-${dd}`; // YYYY-MM-DD
+      const dateKey = `${yyyy}-${mm}-${dd}`;
 
-      // Lấy chỉ số ngày trong tuần (0=CN, 1=T2, ..., 6=T7)
       const dayIndex = currentDate.getDay();
       const dayOfWeekName = dayNames[dayIndex];
 
-      const netRevenue = revenueMap.get(dateKey) || 0;
+      const dayStats = statsMap.get(dateKey) || { net: 0, gmv: 0, students: 0 };
 
       rawData.push({
         dayOfWeek: dayOfWeekName,
         date: dateKey,
-        totalNetRevenue: netRevenue,
+        totalNetRevenue: dayStats.net,
+        totalGmv: dayStats.gmv,
+        newStudents: dayStats.students,
       });
+
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    const sortFunction = (a: WeeklyRevenueItem, b: WeeklyRevenueItem) => {
+    const finalData = rawData.sort((a, b) => {
       const getDayIndex = (dateString: string): number => {
         return new Date(dateString).getDay();
       };
 
       const indexA = getDayIndex(a.date);
       const indexB = getDayIndex(b.date);
+
       const sortedIndexA = (indexA + 6) % 7;
       const sortedIndexB = (indexB + 6) % 7;
 
       return sortedIndexA - sortedIndexB;
-    };
-
-    const finalData = rawData.sort(sortFunction);
+    });
 
     return finalData;
   }
@@ -740,16 +739,17 @@ export class PaymentService {
       where: {
         id: courseId,
         instructor: { userId: teacherId },
-        status: 'published',
+        status: In(['published', 'archived']),
       },
       select: ['id'],
     });
 
     if (!course) {
       throw new UnauthorizedException(
-        'Không tìm thấy khóa học này, hoặc bạn không có quyền truy cập vào doanh thu của khóa học này.',
+        'Không tìm thấy khóa học này, hoặc bạn không có quyền truy cập.',
       );
     }
+
     const startDate = new Date(startDateString);
     const endDate = new Date(endDateString);
     const formattedEndDate = new Date(endDate.setHours(23, 59, 59, 999));
@@ -774,15 +774,132 @@ export class PaymentService {
       })
       .select("DATE_FORMAT(payment.paid_at, '%Y-%m-%d')", 'paidDate')
       .addSelect(`SUM(item.price * (1 - :feeRate))`, 'totalNetRevenue')
+      .addSelect(`SUM(item.price)`, 'totalGmv')
+      .addSelect(`COUNT(DISTINCT payment.user_id)`, 'newStudents')
       .setParameter('feeRate', PLATFORM_FEE_RATE)
       .groupBy('paidDate')
       .orderBy('paidDate', 'ASC')
-      .getRawMany();
+      .getRawMany<DailyRevenueResult>();
 
-    return this.formatRevenueByDayOfWeek(
-      revenueResults as DailyRevenueResult[],
-      startDate,
-      endDate,
-    );
+    return this.formatRevenueByDayOfWeek(revenueResults, startDate, endDate);
+  }
+
+  async handleGetMainStatsDashboardTeacher(userId: string) {
+    const totalCourses = await this.courseRepo.count({
+      where: {
+        instructor: { userId },
+        status: 'published',
+        parentId: IsNull(),
+        isLive: true,
+      },
+    });
+
+    const query = this.paymentRepo
+      .createQueryBuilder('payment')
+      .innerJoin('payment.items', 'item')
+      .innerJoin('item.course', 'course')
+      .select([
+        'SUM(item.price) AS gmv',
+        'COUNT(DISTINCT payment.user_id) AS newStudents',
+      ])
+      .where('payment.status = :status', { status: 'success' })
+      .andWhere('course.instructor_id = :userId', { userId });
+
+    const statsQuery = await query.getRawOne<RawStatsResult>();
+
+    const gmv = Number(statsQuery?.gmv ?? 0);
+    const TEACHER_COMMISSION_RATE = 0.9;
+
+    return {
+      courses: totalCourses,
+      students: Number(statsQuery?.newStudents ?? 0),
+      gmv: gmv,
+      net: Math.round(gmv * TEACHER_COMMISSION_RATE),
+    };
+  }
+
+  async handleGetMainStatsDashboard(
+    range: string,
+    customStart?: string,
+    customEnd?: string,
+  ) {
+    const totalCourses = await this.courseRepo.count({
+      where: { status: 'published' },
+    });
+
+    const query = this.paymentRepo
+      .createQueryBuilder('payment')
+      .leftJoin('payment.items', 'item')
+      .select([
+        'SUM(item.price) AS gmv',
+        'COUNT(DISTINCT payment.user_id) AS newStudents',
+      ])
+      .where('payment.status = :status', { status: 'success' });
+
+    applyTimeFilter(query, range, customStart, customEnd);
+
+    const statsQuery = await query.getRawOne<RawStatsResult>();
+
+    return {
+      courses: totalCourses,
+      newStudents: Number(statsQuery?.newStudents ?? 0),
+      gmv: Number(statsQuery?.gmv ?? 0),
+      net: Math.round(Number(statsQuery?.gmv ?? 0) * (20 / 110)),
+      label: range?.toLowerCase() || 'all',
+    };
+  }
+
+  async handleGetTop10CoursesRevenue(
+    range: string,
+    customStart?: string,
+    customEnd?: string,
+  ) {
+    const query = this.paymentItemRepo
+      .createQueryBuilder('item')
+      .innerJoin('item.payment', 'payment')
+      .innerJoin('item.course', 'course')
+      .select(['course.title AS name', 'SUM(item.price * 1.1) AS revenue'])
+      .where('payment.status = :status', { status: 'success' })
+      .groupBy('course.id')
+      .addGroupBy('course.title')
+      .orderBy('revenue', 'DESC')
+      .limit(10);
+
+    applyTimeFilter(query, range, customStart, customEnd);
+
+    const result = await query.getRawMany<RawTopCourse>();
+    return result.map((item) => ({
+      name: item.name,
+      revenue: Math.round(Number(item.revenue || 0)),
+    }));
+  }
+
+  async handleGetTop10CategoriesRevenue(
+    range: string,
+    customStart?: string,
+    customEnd?: string,
+  ) {
+    const query = this.paymentItemRepo
+      .createQueryBuilder('item')
+      .innerJoin('item.payment', 'payment')
+      .innerJoin('item.course', 'course')
+      .innerJoin('course.category', 'category')
+      .select([
+        'category.categoryName AS name',
+        'SUM(item.price * 1.1) AS revenue',
+      ])
+      .where('payment.status = :status', { status: 'success' })
+      .groupBy('category.id')
+      .addGroupBy('category.categoryName')
+      .orderBy('revenue', 'DESC')
+      .limit(10);
+
+    applyTimeFilter(query, range, customStart, customEnd);
+
+    const result = await query.getRawMany<RawTopCategory>();
+    return result.map((item) => ({
+      name: item.name,
+      revenue: Math.round(Number(item.revenue || 0)),
+    }));
   }
 }

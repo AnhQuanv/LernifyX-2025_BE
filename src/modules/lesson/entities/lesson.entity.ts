@@ -2,8 +2,6 @@ import {
   Entity,
   Column,
   ManyToOne,
-  CreateDateColumn,
-  UpdateDateColumn,
   JoinColumn,
   OneToMany,
   PrimaryColumn,
@@ -33,6 +31,9 @@ export class Lesson {
     nullable: true,
   })
   duration: number;
+
+  @Column({ name: 'parent_id', type: 'uuid', nullable: true })
+  parentId: string | null;
 
   @Column({ name: 'video_id', type: 'uuid', nullable: true })
   videoId: string | null;
@@ -65,9 +66,18 @@ export class Lesson {
   })
   quizQuestions: QuizQuestion[];
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  @Column({
+    name: 'created_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
+  @Column({
+    name: 'updated_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+    onUpdate: 'CURRENT_TIMESTAMP',
+  })
   updatedAt: Date;
 }

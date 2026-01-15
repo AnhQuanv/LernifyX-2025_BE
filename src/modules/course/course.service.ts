@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
+  BadRequestException,
   ForbiddenException,
   Inject,
   Injectable,
@@ -6,7 +8,13 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Course } from './entities/course.entity';
-import { In, Repository } from 'typeorm';
+import {
+  DataSource,
+  DeepPartial,
+  FindOptionsWhere,
+  In,
+  Repository,
+} from 'typeorm';
 import {
   FilterCoursesDto,
   TeacherCourseFilterDto,
@@ -15,7 +23,7 @@ import { plainToInstance } from 'class-transformer';
 import {
   CourseDetailDto,
   CourseDto,
-  CourseStatusCountRaw,
+  CourseDto1,
   CreateCourseResponseDto,
 } from './dto/course.dto';
 import { Wishlist } from '../wishlist/entities/wishlist.entity';
@@ -29,16 +37,32 @@ import { Category } from '../category/entities/category.entity';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { v2 as Cloudinary } from 'cloudinary';
 import { PaymentItem } from '../payment_items/entities/payment_item.entity';
-type CourseWithRevenue = Course & {
-  revenue: number | null;
-};
+import { LessonVideo } from '../lesson_video/entities/lesson_video.entity';
+import { v4 as uuidv4 } from 'uuid';
+import { QuizOption } from '../quiz_option/entities/quiz_option.entity';
+import { QuizQuestion } from '../quiz_question/entities/quiz_question.entity';
+import { Lesson } from '../lesson/entities/lesson.entity';
+import { Chapter } from '../chapter/entities/chapter.entity';
+
 interface GrossRevenueResult {
   grossRevenue: string | null;
 }
+
+export interface TeacherCourseTree {
+  id: string;
+  name: string;
+  courses: {
+    id: string;
+    title: string;
+  }[];
+}
+
 export interface CourseRevenueDetail {
   id: string;
   name: string;
+  status: 'draft' | 'pending' | 'published' | 'rejected' | 'archived';
   value: number;
+  gmv: number;
   netRevenue: number;
 }
 export interface CourseRevenueRawResult {
@@ -47,13 +71,33 @@ export interface CourseRevenueRawResult {
   netRevenue: string;
 }
 interface CourseRevenueRaw {
-  id: string;
-  netRevenue: string;
+  courseId: string;
+  netRevenue: string; // Kết quả SUM trong SQL thường trả về dạng chuỗi (string)
+}
+
+interface CourseRevenueRaw1 {
+  courseId: string;
+  totalBasePrice: string | null;
+}
+
+interface AdminCourseRevenueRaw {
+  courseId: string;
+  totalBaseRevenue: string | null;
+}
+
+interface CourseStatsRaw {
+  totalAll: string;
+  totalPublished: string;
+  totalPending: string;
+  totalDraft: string;
+  totalRejected: string;
+  totalArchived: string;
 }
 const PLATFORM_FEE_RATE = 0.1;
 @Injectable()
 export class CourseService {
   constructor(
+    private dataSource: DataSource,
     @InjectRepository(Course)
     private readonly courseRepository: Repository<Course>,
     @InjectRepository(Wishlist)
@@ -400,7 +444,7 @@ export class CourseService {
         case 'completed':
           return progress === 100;
         default:
-          return true; // all
+          return true;
       }
     });
 
@@ -602,6 +646,67 @@ export class CourseService {
     };
   }
 
+  async handleGetLessonDetailForTeacher(courseId: string, lessonId: string) {
+    const course = await this.courseRepository.findOne({
+      where: { id: courseId, status: 'published' },
+      relations: [
+        'chapters',
+        'chapters.lessons',
+        'chapters.lessons.quizQuestions',
+        'chapters.lessons.quizQuestions.options',
+        'chapters.lessons.videoAsset',
+      ],
+    });
+
+    if (!course) throw new NotFoundException('Không tìm thấy khóa học');
+
+    const allLessons = course.chapters
+      .sort((a, b) => a.order - b.order)
+      .flatMap((ch) => ch.lessons.sort((a, b) => a.order - b.order));
+
+    const lesson = allLessons.find((l) => l.id === lessonId);
+    if (!lesson) throw new NotFoundException('Không tìm thấy bài học');
+
+    const hasQuiz = lesson.quizQuestions && lesson.quizQuestions.length > 0;
+    const quiz = hasQuiz
+      ? lesson.quizQuestions
+          .sort((a, b) => a.order - b.order)
+          .map((q) => {
+            const optionsText = q.options.map((o) => o.text);
+            const correctAnswerIndex = q.options.findIndex(
+              (o) => o.id === q.correctOptionId,
+            );
+
+            return {
+              id: q.id,
+              question: q.question,
+              options: optionsText,
+              correctAnswer: correctAnswerIndex,
+            };
+          })
+      : [];
+
+    const videoAsset = lesson.videoAsset;
+
+    return {
+      id: lesson.id,
+      title: lesson.title,
+      duration: lesson.duration,
+      canViewVideo: true,
+      videoAsset: videoAsset
+        ? {
+            publicId: videoAsset.publicId,
+            originalUrl: videoAsset.originalUrl,
+            duration: videoAsset.duration,
+            width: videoAsset.widthOriginal,
+            height: videoAsset.heightOriginal,
+          }
+        : null,
+      hasQuiz,
+      quiz,
+    };
+  }
+
   async handleGetTeacherDetail(teacherId: string, userId?: string) {
     const teacher = await this.userRepository.findOne({
       where: { userId: teacherId },
@@ -676,6 +781,136 @@ export class CourseService {
     };
   }
 
+  async handleCreateCourseDraft(courseId: string, userId: string) {
+    if (!courseId) {
+      throw new BadRequestException('courseId không được để trống');
+    }
+    return await this.dataSource.transaction(async (manager) => {
+      const course = await manager.findOne(Course, {
+        where: { id: courseId, instructor: { userId } },
+        relations: [
+          'category',
+          'instructor',
+          'chapters',
+          'chapters.lessons',
+          'chapters.lessons.videoAsset',
+          'chapters.lessons.quizQuestions',
+          'chapters.lessons.quizQuestions.options',
+        ],
+      });
+
+      if (!course) throw new NotFoundException('Không tìm thấy khóa học');
+      if (!['published', 'archived'].includes(course.status)) {
+        return { redirectId: course.id };
+      }
+
+      const existingDraft = await manager.findOne(Course, {
+        where: {
+          parentId: courseId,
+          status: In(['draft', 'pending', 'rejected']),
+        },
+      });
+      if (existingDraft) return { redirectId: existingDraft.id };
+
+      const newChapters = (course.chapters || []).map((chapter) => {
+        const newLessons = (chapter.lessons || []).map((lesson) => {
+          let newVideoAsset: LessonVideo | null = null;
+          if (lesson.videoAsset) {
+            const { id, lesson: _, ...videoData } = lesson.videoAsset;
+            newVideoAsset = manager.create(LessonVideo, {
+              ...videoData,
+              id: uuidv4(),
+            } as DeepPartial<LessonVideo>);
+          }
+
+          const newQuizQuestions = (lesson.quizQuestions || []).map((q) => {
+            const newQuestionId = uuidv4();
+            let newCorrectOptionId: string | null = null;
+
+            const newOptions = (q.options || []).map((o) => {
+              const newOptionId = uuidv4();
+              if (o.id === q.correctOptionId) {
+                newCorrectOptionId = newOptionId;
+              }
+              const { id, createdAt, updatedAt, ...optionData } = o;
+              return manager.create(QuizOption, {
+                ...optionData,
+                id: newOptionId,
+              });
+            });
+
+            const { id, createdAt, updatedAt, options, ...qData } = q;
+            return manager.create(QuizQuestion, {
+              ...qData,
+              id: newQuestionId,
+              options: newOptions,
+              correctOptionId: newCorrectOptionId ?? undefined,
+            } as any);
+          });
+
+          const {
+            id: originalLessonId,
+            createdAt,
+            updatedAt,
+            videoAsset,
+            quizQuestions,
+            ...lessonData
+          } = lesson;
+          return manager.create(Lesson, {
+            ...lessonData,
+            id: uuidv4(),
+            parentId: originalLessonId,
+            videoAsset: newVideoAsset ?? undefined,
+            quizQuestions: newQuizQuestions,
+          } as any);
+        });
+
+        const {
+          id: originalChapterId,
+          createdAt,
+          updatedAt,
+          lessons,
+          ...chapterData
+        } = chapter;
+        return manager.create(Chapter, {
+          ...chapterData,
+          id: uuidv4(),
+          parentId: originalChapterId,
+          lessons: newLessons,
+        });
+      });
+
+      const { id, createdAt, updatedAt, childDrafts, chapters, ...courseData } =
+        course;
+      const draftCourse = manager.create(Course, {
+        ...courseData,
+        id: uuidv4(),
+        status: 'draft',
+        isLive: false,
+        parentId: courseId,
+        hasDraft: false,
+        chapters: newChapters,
+        students: 0,
+        rating: 0,
+        ratingCount: 0,
+      });
+
+      const savedDraft = await manager.save(draftCourse);
+
+      await manager.update(Course, courseId, { hasDraft: true });
+      const parentCourse = await manager.findOne(Course, {
+        where: { id: courseId },
+      });
+
+      if (parentCourse) {
+        parentCourse.hasDraft = true;
+        const updatedParent = await manager.save(parentCourse);
+      }
+
+      return { id: savedDraft.id };
+    });
+  }
+
   async handleCreateCourse(dto: CreateCourseDto, instructorId: string) {
     const course = new Course();
 
@@ -725,18 +960,27 @@ export class CourseService {
     return formatted;
   }
 
-  async handleUpdateCourse(dto: UpdateCourseDto, instructorId: string) {
+  async handleUpdateCourse(
+    dto: UpdateCourseDto,
+    instructorId: string,
+    userRole?: string,
+  ) {
     const course = await this.courseRepository.findOne({
       where: { id: dto.id },
       relations: ['instructor', 'category'],
     });
 
     if (!course) {
-      throw new NotFoundException('Course not found');
+      throw new NotFoundException('Không tìm thấy khóa học!');
     }
 
-    if (course.instructor.userId !== instructorId) {
-      throw new ForbiddenException('You are not allowed to update this course');
+    const isOwner = course.instructor.userId === instructorId;
+    const isAdmin = userRole === 'admin';
+
+    if (!isOwner && !isAdmin) {
+      throw new ForbiddenException(
+        'Bạn không có quyền truy cập tài nguyên này!',
+      );
     }
 
     if (dto.title !== undefined) course.title = dto.title;
@@ -783,10 +1027,183 @@ export class CourseService {
       course.status = dto.status;
     }
 
+    if (dto.rejectionReason !== undefined) {
+      course.rejectionReason = dto.rejectionReason;
+    }
+
+    if (dto.archiveReason !== undefined) {
+      course.archiveReason = dto.archiveReason;
+    }
+
+    if (dto.submissionNote !== undefined) {
+      course.submissionNote = dto.submissionNote;
+    }
+
+    if (dto.isLive !== undefined) {
+      course.isLive = dto.isLive;
+    }
+
     const updated = await this.courseRepository.save(course);
 
     return plainToInstance(CreateCourseResponseDto, updated, {
       excludeExtraneousValues: true,
+    });
+  }
+
+  async handleApproveChildCourse(childCourseId: string, adminId: string) {
+    return await this.dataSource.transaction(async (manager) => {
+      const childCourse = await manager.findOne(Course, {
+        where: { id: childCourseId },
+        relations: [
+          'instructor',
+          'category',
+          'chapters',
+          'chapters.lessons',
+          'chapters.lessons.videoAsset',
+          'chapters.lessons.quizQuestions',
+          'chapters.lessons.quizQuestions.options',
+        ],
+      });
+
+      if (!childCourse) {
+        throw new NotFoundException('Không tìm thấy bản nháp khóa học');
+      }
+
+      if (!childCourse.parentId) {
+        throw new BadRequestException(
+          'Khóa học này không phải là bản nháp (không có ParentId)',
+        );
+      }
+
+      // 2. Tìm bản chính (Parent Course)
+      const parentCourse = await manager.findOne(Course, {
+        where: { id: childCourse.parentId },
+        relations: ['category'],
+      });
+
+      if (!parentCourse) {
+        throw new NotFoundException('Không tìm thấy khóa học gốc để đồng bộ');
+      }
+
+      // 3. ĐỒNG BỘ METADATA (Course Level)
+      // Sao chép toàn bộ thông tin từ bản nháp sang bản chính
+      parentCourse.title = childCourse.title;
+      parentCourse.description = childCourse.description;
+      parentCourse.requirements = childCourse.requirements;
+      parentCourse.learnings = childCourse.learnings;
+      parentCourse.price = childCourse.price;
+      parentCourse.originalPrice = childCourse.originalPrice;
+      parentCourse.discount = childCourse.discount;
+      parentCourse.image = childCourse.image;
+      parentCourse.level = childCourse.level;
+      parentCourse.category = childCourse.category;
+      parentCourse.isLive = childCourse.isLive;
+      parentCourse.hasDraft = false; // Tắt cờ báo có bản nháp
+      parentCourse.status = 'published'; // Đảm bảo bản chính luôn là published
+
+      // 4. ĐỒNG BỘ CHAPTERS & LESSONS (Deep Sync)
+      for (const childChapter of childCourse.chapters) {
+        if (!childChapter.parentId) continue; // Bỏ qua nếu chapter mới không có liên kết gốc
+
+        const targetChapter = await manager.findOne(Chapter, {
+          where: { id: childChapter.parentId },
+        });
+
+        if (targetChapter) {
+          targetChapter.title = childChapter.title;
+          targetChapter.order = childChapter.order;
+          await manager.save(targetChapter);
+
+          // Đồng bộ Lessons trong Chapter
+          for (const childLesson of childChapter.lessons) {
+            if (!childLesson.parentId) continue;
+
+            const targetLesson = await manager.findOne(Lesson, {
+              where: { id: childLesson.parentId },
+              relations: ['videoAsset'],
+            });
+
+            if (targetLesson) {
+              targetLesson.title = childLesson.title;
+              targetLesson.content = childLesson.content;
+              targetLesson.order = childLesson.order;
+              targetLesson.duration = childLesson.duration;
+
+              // Xử lý VideoAsset: Cập nhật thông tin video của bản chính theo bản nháp
+              if (childLesson.videoAsset) {
+                // Nếu bản chính đã có videoAsset, ta cập nhật nội dung. Nếu chưa, tạo mới.
+                if (targetLesson.videoAsset) {
+                  targetLesson.videoAsset.publicId =
+                    childLesson.videoAsset.publicId;
+                  targetLesson.videoAsset.originalUrl =
+                    childLesson.videoAsset.originalUrl;
+                  targetLesson.videoAsset.duration =
+                    childLesson.videoAsset.duration;
+                  await manager.save(targetLesson.videoAsset);
+                } else {
+                  const newVideo = manager.create(LessonVideo, {
+                    publicId: childLesson.videoAsset.publicId,
+                    originalUrl: childLesson.videoAsset.originalUrl,
+                    duration: childLesson.videoAsset.duration,
+                    lesson: targetLesson,
+                  });
+                  await manager.save(newVideo);
+                }
+              }
+
+              // Xử lý Quiz: Xóa sạch Quiz cũ ở bản chính và clone từ bản nháp qua
+              // Đây là cách an toàn nhất để đồng bộ Quiz mà không lo vấn đề ID
+              await manager.delete(QuizQuestion, {
+                lesson: { id: targetLesson.id },
+              });
+
+              if (
+                childLesson.quizQuestions &&
+                childLesson.quizQuestions.length > 0
+              ) {
+                for (const childQuiz of childLesson.quizQuestions) {
+                  const newQuiz = manager.create(QuizQuestion, {
+                    id: uuidv4(),
+                    question: childQuiz.question,
+                    order: childQuiz.order,
+                    lesson: targetLesson,
+                  });
+                  const savedQuiz = await manager.save(newQuiz);
+
+                  let newCorrectId: string | null = null;
+                  for (const opt of childQuiz.options) {
+                    const newOptId = uuidv4();
+                    if (opt.id === childQuiz.correctOptionId) {
+                      newCorrectId = newOptId;
+                    }
+                    await manager.save(QuizOption, {
+                      id: newOptId,
+                      text: opt.text,
+                      question: savedQuiz,
+                    });
+                  }
+                  // Cập nhật lại ID đáp án đúng sau khi đã có ID các Option mới
+                  await manager.update(QuizQuestion, savedQuiz.id, {
+                    correctOptionId: newCorrectId ?? undefined, // Sử dụng nullish coalescing
+                  });
+                }
+              }
+              await manager.save(targetLesson);
+            }
+          }
+        }
+      }
+
+      // 5. Cập nhật bản chính và bản nháp
+      await manager.save(parentCourse);
+
+      childCourse.status = 'published';
+      await manager.save(childCourse);
+      await manager.delete(Course, childCourse.id);
+      return {
+        success: true,
+        message: 'Đã phê duyệt và đồng bộ nội dung thành công',
+      };
     });
   }
 
@@ -797,16 +1214,43 @@ export class CourseService {
     });
 
     if (!course) {
-      throw new NotFoundException('Course not found');
+      throw new NotFoundException('Không tìm thấy khóa học!');
     }
-    console.log('teacher id: ', course.instructor.userId);
-    console.log('user id: ', instructorId);
 
     if (course.instructor.userId !== instructorId) {
-      throw new ForbiddenException('You are not allowed to update this course');
+      throw new ForbiddenException('Bạn không có quyền cập nhật khóa học này!');
     }
 
     await this.courseRepository.delete(courseId);
+  }
+
+  async handleDeletePublishedCourse(courseId: string, instructorId: string) {
+    const course = await this.courseRepository.findOne({
+      where: { id: courseId },
+      relations: ['instructor'],
+    });
+    if (!course) {
+      throw new NotFoundException('Không tìm thấy khóa học!');
+    }
+
+    if (course.instructor.userId !== instructorId) {
+      throw new ForbiddenException('Bạn không có quyền xóa khóa học này!');
+    }
+
+    const parentId = course.parentId;
+
+    await this.courseRepository.manager.transaction(
+      async (transactionalEntityManager) => {
+        await transactionalEntityManager.delete(Course, courseId);
+        if (parentId) {
+          await transactionalEntityManager.update(
+            Course,
+            { id: parentId },
+            { hasDraft: false },
+          );
+        }
+      },
+    );
   }
 
   async handleFilterTeacherCourses(
@@ -823,10 +1267,19 @@ export class CourseService {
       .createQueryBuilder('course')
       .leftJoinAndSelect('course.instructor', 'instructor')
       .leftJoinAndSelect('course.category', 'category')
-      .where('instructor.userId = :teacherId', { teacherId });
+      .leftJoinAndSelect('course.childDrafts', 'childDrafts')
+      .where('instructor.userId = :teacherId', { teacherId })
+      .andWhere('course.parentId IS NULL');
 
     if (status && status !== 'all') {
-      query.andWhere('course.status = :status', { status });
+      if (status === 'published' || status === 'archived') {
+        query.andWhere('course.status = :status', { status });
+      } else {
+        query.andWhere(
+          '(course.status = :status OR childDrafts.status = :status)',
+          { status },
+        );
+      }
     }
 
     if (search) {
@@ -854,134 +1307,133 @@ export class CourseService {
     }
 
     const skip = (page - 1) * limit;
+
     const [courses, totalCount] = await query
       .skip(skip)
       .take(limit)
       .getManyAndCount();
 
-    const publishedCourses = courses.filter((c) => c.status === 'published');
-    let coursesWithRevenue: CourseWithRevenue[];
-    const PLATFORM_FEE_RATE = 0.1;
-    if (publishedCourses.length > 0) {
-      const courseIds = publishedCourses.map((c) => c.id);
-      const revenueQuery = this.paymentItemRepository
+    let coursesWithRevenue: any[] = [];
+    const TEACHER_COMMISSION_RATE = 0.9;
+
+    if (courses.length > 0) {
+      const courseIds = courses.map((c) => c.id);
+      const revenueResults = await this.paymentItemRepository
         .createQueryBuilder('item')
         .select('item.course_id', 'courseId')
-        .addSelect('SUM(item.price)', 'grossRevenue')
+        .addSelect('SUM(item.price)', 'totalBasePrice')
         .innerJoin('item.payment', 'payment')
         .where('item.course_id IN (:...courseIds)', { courseIds })
         .andWhere('payment.status = :paymentStatus', {
           paymentStatus: 'success',
         })
-        .groupBy('item.course_id');
+        .groupBy('item.course_id')
+        .getRawMany<CourseRevenueRaw1>();
 
-      const revenueResults: { courseId: string; grossRevenue: string }[] =
-        await revenueQuery.getRawMany();
-      const revenueMap = new Map<string, number>(
-        revenueResults.map((r) => {
-          const grossRevenue = parseFloat(r.grossRevenue);
-          const netRevenue = grossRevenue * (1 - PLATFORM_FEE_RATE);
-          return [r.courseId, parseFloat(netRevenue.toFixed(2))];
-        }),
+      const revenueMap = new Map<string, { basePrice: number; net: number }>(
+        revenueResults.map((r) => [
+          r.courseId,
+          {
+            basePrice: parseFloat(r.totalBasePrice || '0'),
+            net: parseFloat(r.totalBasePrice || '0') * TEACHER_COMMISSION_RATE,
+          },
+        ]),
       );
 
       coursesWithRevenue = courses.map((course) => {
-        // Lấy doanh thu thực nhận (Net Revenue)
-        const revenue = revenueMap.get(course.id) || 0;
-
+        const revData = revenueMap.get(course.id) || { basePrice: 0, net: 0 };
         return {
           ...course,
-          revenue, // revenue ở đây là Net Revenue
-        } as CourseWithRevenue;
+          revenue: revData.basePrice,
+          netRevenue: revData.net,
+        };
       });
-    } else {
-      coursesWithRevenue = courses.map((course) => ({
-        ...course,
-        revenue: null,
-      })) as CourseWithRevenue[];
     }
+
     const totalPages = Math.ceil(totalCount / limit);
-    const formatted = plainToInstance(CourseDto, coursesWithRevenue);
+    const formatted = plainToInstance(CourseDto1, coursesWithRevenue);
 
     return {
       data: formatted,
       pagination: {
         total: totalCount,
-        page: page,
-        limit: limit,
+        page: Number(page),
+        limit: Number(limit),
         totalPages: totalPages,
       },
     };
   }
 
   async handleGetTeacherCourseCounts(teacherId: string) {
-    const baseQuery = this.courseRepository
+    const result = await this.courseRepository
       .createQueryBuilder('course')
       .leftJoin('course.instructor', 'instructor')
+      .leftJoin('course.childDrafts', 'child')
       .where('instructor.userId = :teacherId', { teacherId })
-      .select('course.status', 'status')
-      .addSelect('COUNT(course.id)', 'count')
-      .groupBy('course.status');
+      .andWhere('course.parentId IS NULL')
+      .select([
+        'COUNT(DISTINCT course.id) AS totalAll',
+        'COUNT(DISTINCT CASE WHEN course.status = "published" THEN course.id END) AS totalPublished',
+        'COUNT(DISTINCT CASE WHEN course.status = "archived" THEN course.id END) AS totalArchived',
+        'COUNT(DISTINCT CASE WHEN course.status = "pending" OR child.status = "pending" THEN course.id END) AS totalPending',
+        'COUNT(DISTINCT CASE WHEN course.status = "draft" OR child.status = "draft" THEN course.id END) AS totalDraft',
+        'COUNT(DISTINCT CASE WHEN course.status = "rejected" OR child.status = "rejected" THEN course.id END) AS totalRejected',
+      ])
+      .getRawOne<CourseStatsRaw>();
 
-    const results = await baseQuery.getRawMany<CourseStatusCountRaw>();
+    if (!result) return this.getDefaultCounts();
 
-    const counts = {
+    return {
+      totalAll: parseInt(result.totalAll, 10),
+      totalPublished: parseInt(result.totalPublished, 10),
+      totalPending: parseInt(result.totalPending, 10),
+      totalDraft: parseInt(result.totalDraft, 10),
+      totalRejected: parseInt(result.totalRejected, 10),
+      totalArchived: parseInt(result.totalArchived, 10),
+    };
+  }
+
+  private getDefaultCounts() {
+    return {
+      totalAll: 0,
       totalPublished: 0,
       totalPending: 0,
       totalDraft: 0,
       totalRejected: 0,
-    };
-
-    let totalAll = 0;
-
-    for (const row of results) {
-      const status = row.status;
-      const count = parseInt(row.count, 10);
-      totalAll += count;
-
-      switch (status) {
-        case 'published':
-          counts.totalPublished = count;
-          break;
-        case 'pending':
-          counts.totalPending = count;
-          break;
-        case 'draft':
-          counts.totalDraft = count;
-          break;
-        case 'rejected':
-          counts.totalRejected = count;
-          break;
-      }
-    }
-
-    return {
-      ...counts,
-      totalAll: totalAll,
+      totalArchived: 0,
     };
   }
 
-  async handleGetTeacherCourseDetail(teacherId: string, courseId: string) {
-    const course = await this.courseRepository
+  async handleGetTeacherCourseDetail(
+    userId: string,
+    courseId: string,
+    isAdmin: boolean = false,
+  ) {
+    const query = this.courseRepository
       .createQueryBuilder('course')
-      .where('course.id = :courseId', { courseId })
-      .andWhere('course.instructor.userId = :teacherId', { teacherId })
       .leftJoinAndSelect('course.category', 'category')
       .leftJoinAndSelect('course.instructor', 'instructor')
-      .leftJoinAndSelect('course.chapters', 'chapter', undefined, {
-        orderBy: { 'chapter.order': 'ASC' },
-      })
-      .leftJoinAndSelect('chapter.lessons', 'lesson', undefined, {
-        orderBy: { 'lesson.order': 'ASC' },
-      })
+      .leftJoinAndSelect('course.chapters', 'chapter')
+      .leftJoinAndSelect('chapter.lessons', 'lesson')
       .leftJoinAndSelect('lesson.videoAsset', 'videoAsset')
       .leftJoinAndSelect('lesson.quizQuestions', 'quizQuestion')
       .leftJoinAndSelect('quizQuestion.options', 'option')
-      .getOne();
+      .where('course.id = :courseId', { courseId });
+
+    if (!isAdmin) {
+      query.andWhere('course.instructor.userId = :userId', { userId });
+    }
+
+    query.orderBy({
+      'chapter.order': 'ASC',
+      'lesson.order': 'ASC',
+    });
+
+    const course = await query.getOne();
 
     if (!course) {
       throw new NotFoundException({
-        message: 'Không tìm thấy khóa học',
+        message: 'Không tìm thấy khóa học hoặc bạn không có quyền truy cập',
         errorCode: 'RESOURCE_NOT_FOUND',
       });
     }
@@ -1031,20 +1483,24 @@ export class CourseService {
     teacherId: string,
     page: number,
     limit: number,
+    isAdmin: boolean = false,
   ) {
+    const whereCondition: FindOptionsWhere<Course> = { id: courseId };
+
+    if (!isAdmin) {
+      whereCondition.instructor = { userId: teacherId };
+    }
+
     const course = await this.courseRepository.findOne({
-      where: {
-        id: courseId,
-        instructor: {
-          userId: teacherId,
-        },
-      },
+      where: whereCondition,
       relations: ['instructor', 'chapters', 'chapters.lessons'],
     });
 
     if (!course) {
       throw new ForbiddenException(
-        'Bạn không phải là người hướng dẫn của khóa học này hoặc khóa học không tồn tại.',
+        isAdmin
+          ? 'Khóa học không tồn tại.'
+          : 'Bạn không phải là người hướng dẫn của khóa học này hoặc khóa học không tồn tại.',
       );
     }
 
@@ -1068,9 +1524,12 @@ export class CourseService {
     if (totalStudents === 0) {
       return {
         data: [],
-        total: 0,
-        page,
-        limit,
+        pagination: {
+          total: 0,
+          page,
+          limit,
+          totalPages: 0,
+        },
       };
     }
 
@@ -1198,96 +1657,76 @@ export class CourseService {
   }
 
   async handleGetTeacherCoursesRevenue(teacherId: string) {
-    const teacherPublishedCourses = await this.courseRepository.find({
-      select: ['id', 'title', 'students'],
-      where: {
-        instructor: { userId: teacherId },
-        status: 'published',
-      },
-      relations: ['instructor'],
+    const allTeacherCourses = await this.courseRepository.find({
+      select: ['id', 'title', 'status'],
+      where: { instructor: { userId: teacherId } },
     });
 
-    if (!teacherPublishedCourses || teacherPublishedCourses.length === 0) {
-      return {
-        totalPublishedCourses: 0,
-        totalStudents: 0,
-        totalNetRevenue: 0,
-        courseRevenueDetails: [],
-      };
+    if (!allTeacherCourses || allTeacherCourses.length === 0) {
+      return { courseRevenueDetails: [] };
     }
 
-    const teacherCourseIds = teacherPublishedCourses.map((c) => c.id);
+    const allCourseIds = allTeacherCourses.map((c) => c.id);
 
-    const courseRevenueRaw: CourseRevenueRawResult[] =
-      await this.paymentItemRepository
-        .createQueryBuilder('item')
-        .innerJoin('item.payment', 'payment', 'payment.status = :status', {
-          status: 'success',
-        })
-        .innerJoin('payment.user', 'buyer')
+    const courseRevenueRaw = await this.paymentItemRepository
+      .createQueryBuilder('item')
+      .innerJoin('item.payment', 'payment', 'payment.status = :status', {
+        status: 'success',
+      })
+      .where('item.course_id IN (:...courseIds)', {
+        courseIds: allCourseIds,
+      })
+      .select('item.course_id', 'id')
+      .addSelect('SUM(item.price)', 'gmv')
+      .groupBy('item.course_id')
+      .getRawMany<{ id: string; gmv: string }>();
 
-        .where('item.course_id IN (:...courseIds)', {
-          courseIds: teacherCourseIds,
-        })
+    const TEACHER_RATE = 1 - PLATFORM_FEE_RATE;
 
-        .select('item.course_id', 'id')
-        .addSelect(`SUM(item.price * (1 - :feeRate))`, 'netRevenue')
-        .setParameter('feeRate', PLATFORM_FEE_RATE)
-
-        .groupBy('item.course_id')
-        .getRawMany();
-
-    const totalStudentsFromCourses = teacherPublishedCourses.reduce(
-      (sum, course) => sum + (course.students || 0),
+    const totalNetRevenue = courseRevenueRaw.reduce(
+      (sum, raw) => sum + parseFloat(raw.gmv) * TEACHER_RATE,
       0,
     );
 
-    const totalStudents = totalStudentsFromCourses;
+    const courseRevenueDetails: CourseRevenueDetail[] = courseRevenueRaw.map(
+      (raw) => {
+        const courseId = raw.id;
+        const gmvValue = parseFloat(raw.gmv) || 0;
+        const netRevenueValue = gmvValue * TEACHER_RATE;
 
-    let totalNetRevenue = 0;
-    const courseNetRevenues: { id: string; netValue: number }[] = [];
-    for (const raw of courseRevenueRaw) {
-      const netRevenueValue = parseFloat(raw.netRevenue) || 0;
-      totalNetRevenue += netRevenueValue;
-      courseNetRevenues.push({ id: raw.id, netValue: netRevenueValue });
-    }
-    const courseRevenueDetails: CourseRevenueDetail[] = [];
-    for (const item of courseNetRevenues) {
-      const courseId = item.id;
-      const netRevenueValue = item.netValue;
+        const courseInfo = allTeacherCourses.find((c) => c.id === courseId);
+        const courseTitle = courseInfo?.title || 'Khóa học không xác định';
+        const courseStatus = courseInfo?.status || 'archived';
 
-      const courseTitle =
-        teacherPublishedCourses.find((c) => c.id === courseId)?.title ||
-        'Khóa học không xác định';
+        let percentValue = 0;
+        if (totalNetRevenue > 0) {
+          percentValue = (netRevenueValue / totalNetRevenue) * 100;
+        }
 
-      let percentValue = 0;
-      if (totalNetRevenue > 0) {
-        percentValue = (netRevenueValue / totalNetRevenue) * 100;
-      }
+        return {
+          id: courseId,
+          name: courseTitle,
+          status: courseStatus,
+          value: parseFloat(percentValue.toFixed(2)),
+          gmv: parseFloat(gmvValue.toFixed(2)),
+          netRevenue: parseFloat(netRevenueValue.toFixed(2)),
+        };
+      },
+    );
 
-      courseRevenueDetails.push({
-        id: courseId,
-        name: courseTitle,
-        value: parseFloat(percentValue.toFixed(2)),
-        netRevenue: netRevenueValue,
-      });
-    }
     return {
-      totalPublishedCourses: teacherPublishedCourses.length,
-      totalStudents: totalStudents,
-      totalNetRevenue: parseFloat(totalNetRevenue.toFixed(2)),
       courseRevenueDetails: courseRevenueDetails,
     };
   }
 
   async handleGetTeacherCoursesRevenuePage(teacherId: string) {
+    // 1. Lấy danh sách khóa học đã xuất bản của giáo viên
     const teacherPublishedCourses = await this.courseRepository.find({
       select: ['id', 'title', 'rating', 'students'],
       where: {
         instructor: { userId: teacherId },
         status: 'published',
       },
-      relations: ['instructor'],
     });
 
     if (!teacherPublishedCourses || teacherPublishedCourses.length === 0) {
@@ -1296,6 +1735,8 @@ export class CourseService {
 
     const teacherCourseIds = teacherPublishedCourses.map((c) => c.id);
 
+    // 2. Truy vấn doanh thu từ PaymentItem
+    // LƯU Ý: Đặt alias cột là 'courseId' để khớp với logic xử lý bên dưới
     const courseRevenueRaw = await this.paymentItemRepository
       .createQueryBuilder('item')
       .innerJoin('item.payment', 'payment', 'payment.status = :status', {
@@ -1304,22 +1745,13 @@ export class CourseService {
       .where('item.course_id IN (:...courseIds)', {
         courseIds: teacherCourseIds,
       })
-      .select('item.course_id', 'id')
+      .select('item.course_id', 'courseId') // Đổi từ 'id' thành 'courseId'
       .addSelect(`SUM(item.price * (1 - :feeRate))`, 'netRevenue')
       .setParameter('feeRate', PLATFORM_FEE_RATE)
       .groupBy('item.course_id')
-      .getRawMany();
+      .getRawMany<CourseRevenueRaw>();
 
-    const courseNetRevenues: { id: string; netValue: number }[] = [];
-
-    for (const raw of courseRevenueRaw as CourseRevenueRaw[]) {
-      const netRevenueValue = parseFloat(raw.netRevenue) || 0;
-
-      if (netRevenueValue > 0) {
-        courseNetRevenues.push({ id: raw.id, netValue: netRevenueValue });
-      }
-    }
-
+    // 3. Tạo Map để tra cứu thông tin khóa học nhanh hơn (O(1))
     const courseInfoMap = new Map(
       teacherPublishedCourses.map((c) => [
         c.id,
@@ -1327,23 +1759,214 @@ export class CourseService {
       ]),
     );
 
-    const courseRevenueDetails = courseNetRevenues.map((item) => {
-      const courseId = item.id;
-      const netRevenueValue = item.netValue;
+    // 4. Kết hợp dữ liệu doanh thu với thông tin khóa học
+    const courseRevenueDetails = courseRevenueRaw.map((raw) => {
+      const courseId = raw.courseId;
+      const netRevenueValue = parseFloat(raw.netRevenue) || 0;
       const courseInfo = courseInfoMap.get(courseId);
-      const courseTitle = courseInfo?.title || 'Khóa học không xác định';
-      const courseRating = courseInfo?.rating || 0;
-      const courseStudents = courseInfo?.students || 0;
 
       return {
         id: courseId,
-        name: courseTitle,
-        rating: courseRating,
-        students: courseStudents,
+        name: courseInfo?.title || 'Khóa học không xác định',
+        rating: courseInfo?.rating || '0', // Trả về string nếu interface yêu cầu string
+        students: courseInfo?.students || 0,
         netRevenue: netRevenueValue,
       };
     });
 
+    // 5. (Tùy chọn) Nếu bạn muốn hiển thị cả những khóa học CÓ doanh thu = 0
+    // mà không có trong bảng PaymentItem, bạn có thể loop qua teacherPublishedCourses thay thế.
+
     return courseRevenueDetails;
+  }
+
+  async handleGetAdminCourseCounts() {
+    const result = await this.courseRepository
+      .createQueryBuilder('course')
+      .leftJoin('course.childDrafts', 'child')
+      .where('course.parentId IS NULL')
+      .select([
+        'COUNT(DISTINCT CASE WHEN course.status != "draft" THEN course.id END) AS totalAll',
+        'COUNT(DISTINCT CASE WHEN course.status = "published" THEN course.id END) AS totalPublished',
+        'COUNT(DISTINCT CASE WHEN course.status = "archived" THEN course.id END) AS totalArchived',
+        'COUNT(DISTINCT CASE WHEN course.status = "pending" OR child.status = "pending" THEN course.id END) AS totalPending',
+        'COUNT(DISTINCT CASE WHEN course.status = "rejected" OR child.status = "rejected" THEN course.id END) AS totalRejected',
+      ])
+      .getRawOne<Omit<CourseStatsRaw, 'totalDraft'>>();
+
+    if (!result) {
+      return {
+        totalAll: 0,
+        totalPublished: 0,
+        totalPending: 0,
+        totalRejected: 0,
+        totalArchived: 0,
+      };
+    }
+
+    return {
+      totalAll: parseInt(result.totalAll, 10),
+      totalPublished: parseInt(result.totalPublished, 10),
+      totalPending: parseInt(result.totalPending, 10),
+      totalRejected: parseInt(result.totalRejected, 10),
+      totalArchived: parseInt(result.totalArchived, 10),
+    };
+  }
+  async handleFilterAdminCourses({
+    status = 'all',
+    search,
+    sortBy = 'newest',
+    page = 1,
+    limit = 6,
+  }: TeacherCourseFilterDto) {
+    const query = this.courseRepository
+      .createQueryBuilder('course')
+      .leftJoinAndSelect('course.instructor', 'instructor')
+      .leftJoinAndSelect('course.category', 'category')
+      .leftJoinAndSelect(
+        'course.childDrafts',
+        'childDrafts',
+        'childDrafts.status != :draftStatus',
+        { draftStatus: 'draft' },
+      )
+      .where('course.parentId IS NULL');
+
+    if (status && status !== 'all') {
+      if (status === 'published' || status === 'archived') {
+        query.andWhere('course.status = :status', { status });
+      } else {
+        query.andWhere(
+          '(course.status = :status OR childDrafts.status = :status)',
+          { status },
+        );
+      }
+    } else {
+      query.andWhere('course.status IN (:...statuses)', {
+        statuses: ['published', 'pending', 'rejected', 'archived'],
+      });
+    }
+
+    if (search) {
+      query.andWhere('(LOWER(course.title) LIKE LOWER(:search) )', {
+        search: `%${search}%`,
+      });
+    }
+
+    switch (sortBy) {
+      case 'newest':
+        query.orderBy('course.createdAt', 'DESC');
+        break;
+      case 'oldest':
+        query.orderBy('course.createdAt', 'ASC');
+        break;
+      case 'a-z':
+        query.orderBy('course.title', 'ASC');
+        break;
+      case 'z-a':
+        query.orderBy('course.title', 'DESC');
+        break;
+      default:
+        query.orderBy('course.createdAt', 'DESC');
+        break;
+    }
+
+    const skip = (page - 1) * limit;
+    const [courses, totalCount] = await query
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    let coursesWithRevenue: any[] = [];
+    if (courses.length > 0) {
+      const courseIds = courses.map((c) => c.id);
+      const revenueResults = await this.paymentItemRepository
+        .createQueryBuilder('item')
+        .select('item.course_id', 'courseId')
+        .addSelect('SUM(item.price)', 'totalBaseRevenue')
+        .innerJoin('item.payment', 'payment')
+        .where('item.course_id IN (:...courseIds)', { courseIds })
+        .andWhere('payment.status = :paymentStatus', {
+          paymentStatus: 'success',
+        })
+        .groupBy('item.course_id')
+        .getRawMany<AdminCourseRevenueRaw>();
+
+      const revenueMap = new Map<
+        string,
+        { revenue: number; platformProfit: number }
+      >(
+        revenueResults.map((r) => [
+          r.courseId,
+          {
+            revenue: parseFloat(r.totalBaseRevenue || '0'),
+            platformProfit: parseFloat(r.totalBaseRevenue || '0') * 0.2,
+          },
+        ]),
+      );
+
+      coursesWithRevenue = courses.map((course) => {
+        const data = revenueMap.get(course.id) || {
+          revenue: 0,
+          platformProfit: 0,
+        };
+        return {
+          ...course,
+          revenue: data.revenue,
+          platformProfit: data.platformProfit,
+        };
+      });
+    }
+
+    const totalPages = Math.ceil(totalCount / limit);
+    const formatted = plainToInstance(CourseDto1, coursesWithRevenue);
+
+    return {
+      data: formatted,
+      pagination: {
+        total: totalCount,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages: totalPages,
+      },
+    };
+  }
+
+  async handleGetTeacherCourseTree() {
+    const paidCoursesRaw = await this.paymentItemRepository
+      .createQueryBuilder('item')
+      .innerJoin('item.payment', 'payment')
+      .where('payment.status = :status', { status: 'success' })
+      .select('DISTINCT item.course_id', 'courseId')
+      .getRawMany<{ courseId: string }>();
+
+    if (paidCoursesRaw.length === 0) return [];
+
+    const validCourseIds = paidCoursesRaw.map((pc) => pc.courseId);
+
+    const teachers = await this.userRepository
+      .createQueryBuilder('user')
+      // Join trực tiếp vào quan hệ courses của User
+      .innerJoinAndSelect('user.courses', 'course', 'course.id IN (:...ids)', {
+        ids: validCourseIds,
+      })
+      .select([
+        'user.userId', // Trong Entity là userId
+        'user.fullName', // Trong Entity là fullName
+        'course.id',
+        'course.title',
+        'course.status',
+      ])
+      .getMany();
+
+    // 3. Map dữ liệu về cấu trúc Tree và đảm bảo Type-safe
+    return teachers.map((user) => ({
+      id: user.userId,
+      name: user.fullName,
+      courses: user.courses.map((c) => ({
+        id: c.id,
+        title: c.title,
+        status: c.status,
+      })),
+    }));
   }
 }

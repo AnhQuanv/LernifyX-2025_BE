@@ -28,7 +28,6 @@ export class UserPreferencesController {
     @Body() dto: CreateUserPreferenceDto,
     @Req() req: RequestWithUser,
   ) {
-    console.log('dto', dto);
     const userId = req.user.sub;
     await this.userPreferencesService.handleCreate(userId, dto);
     return ApiResponse.success(null, 'Tạo preference thành công');

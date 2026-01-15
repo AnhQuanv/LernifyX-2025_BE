@@ -56,7 +56,7 @@ export class CommentController {
 
   @Post('/create')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('student')
+  @Roles('student', 'teacher')
   async createComment(
     @Body() body: CreateCommentDto,
     @Req() req: RequestWithUser,

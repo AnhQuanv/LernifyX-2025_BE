@@ -3,13 +3,11 @@ import { Category } from '../../../modules/category/entities/category.entity';
 import { User } from '../../../modules/user/entities/user.entity';
 import {
   Column,
-  CreateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
-  UpdateDateColumn,
 } from 'typeorm';
 import { Comment } from '../../../modules/comment/entities/comment.entity';
 import { PaymentItem } from '../../../modules/payment_items/entities/payment_item.entity';
@@ -19,7 +17,7 @@ export class Course {
   @PrimaryGeneratedColumn('uuid', { name: 'id' })
   id: string;
 
-  @Column({ name: 'title', type: 'varchar' })
+  @Column({ name: 'title', type: 'varchar', nullable: true })
   title: string;
 
   @Column({ name: 'description', type: 'text', nullable: true })
@@ -81,10 +79,35 @@ export class Course {
 
   @Column({
     type: 'enum',
-    enum: ['draft', 'pending', 'published', 'rejected'],
+    enum: ['draft', 'pending', 'published', 'rejected ', 'archived'],
     default: 'draft',
   })
-  status: 'draft' | 'pending' | 'published' | 'rejected';
+  status: 'draft' | 'pending' | 'published' | 'rejected' | 'archived';
+
+  @Column({ name: 'rejection_reason', type: 'text', nullable: true })
+  rejectionReason: string;
+
+  @Column({ name: 'archive_reason', type: 'text', nullable: true })
+  archiveReason: string;
+
+  @Column({ name: 'submission_note', type: 'text', nullable: true })
+  submissionNote: string;
+
+  @Column({ name: 'is_live', type: 'boolean', default: false })
+  isLive: boolean;
+
+  @Column({ name: 'parent_id', type: 'uuid', nullable: true })
+  parentId: string | null;
+
+  @Column({ name: 'has_draft', type: 'boolean', default: false })
+  hasDraft: boolean;
+
+  @ManyToOne(() => Course, (course) => course.childDrafts)
+  @JoinColumn({ name: 'parent_id' })
+  parent: Course;
+
+  @OneToMany(() => Course, (course) => course.parent)
+  childDrafts: Course[];
 
   @ManyToOne(() => Category, (category) => category.courses)
   @JoinColumn({ name: 'category_id' })
@@ -103,9 +126,18 @@ export class Course {
   @OneToMany(() => Comment, (comment) => comment.course)
   comments: Comment[];
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  @Column({
+    name: 'created_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
+  @Column({
+    name: 'updated_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+    onUpdate: 'CURRENT_TIMESTAMP',
+  })
   updatedAt: Date;
 }

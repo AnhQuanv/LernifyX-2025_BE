@@ -2,13 +2,11 @@ import { PaymentItem } from '../../../modules/payment_items/entities/payment_ite
 import { User } from '../../../modules/user/entities/user.entity';
 import {
   Column,
-  CreateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
-  UpdateDateColumn,
 } from 'typeorm';
 
 @Entity('payment')
@@ -59,10 +57,17 @@ export class Payment {
   @Column({ type: 'json', nullable: true })
   raw_response: Record<string, string | undefined> | null;
 
-  @CreateDateColumn()
+  @Column({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   created_at: Date;
 
-  @UpdateDateColumn()
+  @Column({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+    onUpdate: 'CURRENT_TIMESTAMP',
+  })
   updated_at: Date;
 
   @OneToMany(() => PaymentItem, (item) => item.payment)

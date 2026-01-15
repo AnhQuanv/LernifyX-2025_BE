@@ -39,7 +39,6 @@ export class MuxService {
   async createSignedUploadUrl(lessonId: string, taskId: string) {
     try {
       const tokenSecret = this.configService.get<string>('MUX_TOKEN_SECRET');
-      // 🚨 DEBUG LOG: Kiểm tra xem các giá trị có được đọc không
       console.log(
         `[MUX SERVICE] Token ID Read: ${this.configService.get<string>('MUX_TOKEN_ID')}`,
       );
@@ -53,15 +52,14 @@ export class MuxService {
         !this.configService.get<string>('MUX_TOKEN_ID') ||
         !this.configService.get<string>('MUX_TOKEN_SECRET')
       ) {
-        console.error('❌ Mux Token ID or Secret is missing in config!');
-        // Bạn có thể throw error tại đây nếu thiếu
+        console.error(' Mux Token ID or Secret is missing in config!');
       }
       const upload = await this.mux.video.uploads.create({
         new_asset_settings: {
           passthrough: JSON.stringify({ lessonId, taskId }),
           playback_policy: ['public'],
         },
-        timeout: 3600, // Timeout 1 giờ
+        timeout: 3600,
         cors_origin: '*',
       });
 

@@ -19,9 +19,18 @@ export class Role {
   @OneToMany(() => User, (user) => user.role)
   users: User[];
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  @Column({
+    name: 'created_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
+  @Column({
+    name: 'updated_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+    onUpdate: 'CURRENT_TIMESTAMP',
+  })
   updatedAt: Date;
 }

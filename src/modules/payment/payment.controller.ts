@@ -98,30 +98,107 @@ export class PaymentController {
   @Get('teacher-payment')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher')
-  async getTeacherPayments(@Req() req: RequestWithUser) {
+  async getTeacherPayments(
+    @Req() req: RequestWithUser,
+    @Query('year') year?: string,
+  ) {
     const userId = req.user?.sub;
-    const result = await this.paymentService.handelGetTeacherPayments(userId);
-    return ApiResponse.success(result, 'Lấy doanh thu hàng tháng thành công');
+    const selectedYear = year ? parseInt(year) : new Date().getFullYear();
+
+    const result = await this.paymentService.handelGetTeacherPayments(
+      userId,
+      selectedYear,
+    );
+    return ApiResponse.success(
+      result,
+      `Lấy doanh thu hàng tháng năm ${selectedYear} thành công`,
+    );
   }
 
   @Get('teacher-payment-course')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('teacher')
+  @Roles('teacher', 'admin')
   async getSpecificPayments(
     @Req() req: RequestWithUser,
     @Query('courseId') courseId: string,
-
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
+    @Query('teacherId') teacherId?: string,
   ) {
-    const userId = req.user?.sub;
+    let targetId = req.user?.sub;
+    if (req.user.roleName.trim() === 'admin') {
+      if (teacherId) {
+        targetId = teacherId;
+      }
+    }
     const result = await this.paymentService.handleGetSpecificPayments(
       courseId,
       startDate,
       endDate,
-      userId,
+      targetId,
     );
+
     return ApiResponse.success(result, 'Lấy doanh thu hàng tháng thành công');
+  }
+
+  @Get('teacher-stats-dashboard')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('teacher')
+  async getStatsDashboardTeacher(@Req() req: RequestWithUser) {
+    const userId = req.user?.sub;
+
+    const result =
+      await this.paymentService.handleGetMainStatsDashboardTeacher(userId);
+    return ApiResponse.success(result, 'Lấy thống kê tổng quan thành công');
+  }
+
+  @Get('admin-stats-dashboard')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async getStatsDashboardAdmin(
+    @Query('range') range: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    const result = await this.paymentService.handleGetMainStatsDashboard(
+      range || 'all',
+      startDate,
+      endDate,
+    );
+    return ApiResponse.success(result, 'Lấy thống kê tổng quan thành công');
+  }
+
+  @Get('admin-top-course-dashboard')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async getTop10CoursesRevenue(
+    @Query('range') range: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    const topCourses = await this.paymentService.handleGetTop10CoursesRevenue(
+      range || 'all',
+      startDate,
+      endDate,
+    );
+    return ApiResponse.success(topCourses, 'Lấy top khóa học thành công');
+  }
+
+  @Get('admin-top-category-dashboard')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async getTop10CategoriesRevenue(
+    @Query('range') range: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    const topCategories =
+      await this.paymentService.handleGetTop10CategoriesRevenue(
+        range || 'all',
+        startDate,
+        endDate,
+      );
+    return ApiResponse.success(topCategories, 'Lấy top danh mục thành công');
   }
 
   @Get()

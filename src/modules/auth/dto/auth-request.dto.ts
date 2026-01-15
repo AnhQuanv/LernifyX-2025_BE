@@ -1,5 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
 export class AuthRequestDto {
   @IsEmail()
@@ -39,4 +46,47 @@ export class RegisterDto {
   @IsString()
   @IsNotEmpty()
   roleName: string;
+}
+
+export class RegisterDtoAdmin {
+  @IsEmail({}, { message: 'Email không hợp lệ' })
+  @IsNotEmpty({ message: 'Email không được để trống' })
+  email: string;
+
+  @IsString()
+  @IsNotEmpty({ message: 'Mật khẩu không được để trống' })
+  @MinLength(6, { message: 'Mật khẩu phải ít nhất 6 ký tự' })
+  password: string;
+
+  @IsString()
+  @IsNotEmpty({ message: 'Họ tên không được để trống' })
+  fullName: string;
+
+  @IsString()
+  @IsNotEmpty({ message: 'Vai trò không được để trống' })
+  roleName: string;
+
+  @IsString()
+  @IsOptional()
+  dateOfBirth?: string;
+
+  @IsString()
+  @IsOptional()
+  phone?: string;
+
+  @IsString()
+  @IsOptional()
+  address?: string;
+
+  @IsString()
+  @IsOptional()
+  bio?: string;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isActive?: boolean;
 }

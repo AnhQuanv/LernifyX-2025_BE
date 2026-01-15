@@ -3,8 +3,6 @@ import {
   Column,
   ManyToOne,
   OneToMany,
-  CreateDateColumn,
-  UpdateDateColumn,
   JoinColumn,
   PrimaryColumn,
 } from 'typeorm';
@@ -22,6 +20,9 @@ export class Chapter {
   @Column({ name: 'order', type: 'int', default: 0 })
   order: number;
 
+  @Column({ name: 'parent_id', type: 'uuid', nullable: true })
+  parentId: string | null;
+
   @ManyToOne(() => Course, (course) => course.chapters, {
     onDelete: 'CASCADE',
   })
@@ -33,9 +34,18 @@ export class Chapter {
   })
   lessons: Lesson[];
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  @Column({
+    name: 'created_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
+  @Column({
+    name: 'updated_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+    onUpdate: 'CURRENT_TIMESTAMP',
+  })
   updatedAt: Date;
 }

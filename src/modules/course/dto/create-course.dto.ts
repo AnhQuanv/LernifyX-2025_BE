@@ -60,8 +60,8 @@ export class CreateCourseDto {
   image?: string;
 
   @IsOptional()
-  @IsEnum(['draft', 'pending', 'published', 'rejected'])
-  status?: 'draft' | 'pending' | 'published' | 'rejected';
+  @IsEnum(['draft', 'pending', 'published', 'rejected', 'archived'])
+  status?: 'draft' | 'pending' | 'published' | 'rejected' | 'archived';
 }
 
 export class CreateChapterAndLessonAndQuizDto {

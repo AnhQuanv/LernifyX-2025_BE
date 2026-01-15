@@ -67,6 +67,53 @@ export class CourseDto {
   updatedAt: Date;
 }
 
+export class CourseDto1 extends CourseDto {
+  @Expose()
+  status: string;
+
+  @Expose()
+  rejectionReason: string;
+
+  @Expose()
+  archiveReason: string;
+
+  @Expose()
+  submissionNote: string;
+
+  @Expose()
+  isLive: boolean;
+
+  @Expose()
+  parentId: string | null;
+
+  @Expose()
+  hasDraft: boolean;
+  @Transform(({ obj }: { obj: Course }) => {
+    if (!obj.childDrafts || obj.childDrafts.length === 0) return null;
+
+    const activeDraft = obj.childDrafts.find((child) =>
+      ['draft', 'pending', 'rejected'].includes(child.status),
+    );
+
+    return activeDraft ? activeDraft.id : null;
+  })
+  @Expose()
+  childCourseId: string | null;
+
+  @Transform(({ obj }: { obj: Course }) => {
+    if (!obj.childDrafts || obj.childDrafts.length === 0) return null;
+    const activeDraft = obj.childDrafts.find((child) =>
+      ['draft', 'pending', 'rejected'].includes(child.status),
+    );
+    return activeDraft ? activeDraft.status : null;
+  })
+  @Expose()
+  childCourseStatus: string | null;
+
+  @Expose()
+  childDrafts: Course;
+}
+
 export class CourseDetailDto {
   @Expose() id: string;
   @Expose() title: string;
@@ -184,9 +231,4 @@ export class CreateCourseResponseDto {
 
   @Expose()
   updatedAt: Date;
-}
-
-export interface CourseStatusCountRaw {
-  status: Course['status'];
-  count: string;
 }

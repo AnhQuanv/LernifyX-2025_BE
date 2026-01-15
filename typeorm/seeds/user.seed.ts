@@ -24,6 +24,7 @@ export const seedUsers = async (dataSource: DataSource) => {
       dateOfBirth: '1990-01-01',
       address: 'Hà Nội',
       role: adminRole,
+      isActive: true,
     },
     {
       fullName: 'Trần Thị B',
@@ -33,6 +34,7 @@ export const seedUsers = async (dataSource: DataSource) => {
       dateOfBirth: '1995-02-15',
       address: 'TP.HCM',
       role: studentRole,
+      isActive: true,
     },
     {
       fullName: 'Nguyễn Văn B',
@@ -42,6 +44,7 @@ export const seedUsers = async (dataSource: DataSource) => {
       dateOfBirth: '1992-08-20',
       address: 'Đà Nẵng',
       role: teacherRole,
+      isActive: true,
     },
   ];
 

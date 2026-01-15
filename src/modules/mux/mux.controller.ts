@@ -56,7 +56,6 @@ export class MuxController {
     @Body('lessonId') lessonId: string,
     @Body('taskId') taskId: string,
   ) {
-    console.log('body: ', lessonId);
     const lesson = await this.lessonRepository.findOne({
       where: { id: lessonId },
     });

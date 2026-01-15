@@ -4,12 +4,17 @@ import {
   IsDateString,
   MinLength,
   Matches,
+  IsBoolean,
 } from 'class-validator';
 
 export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   fullName?: string;
+
+  @IsOptional()
+  @IsString()
+  userId?: string;
 
   @IsOptional()
   @IsString()
@@ -34,6 +39,22 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   avatar?: string;
+
+  @IsOptional()
+  @IsString()
+  password?: string;
+
+  @IsOptional()
+  @IsString()
+  email?: string;
+
+  @IsOptional()
+  @IsString()
+  roleName?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }
 
 export class UpdatePasswordDto {

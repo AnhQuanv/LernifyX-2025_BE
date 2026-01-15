@@ -447,9 +447,9 @@ const coursesData: CourseData[] = [
     instructorName: 'Nguyễn Văn An',
     level: 'Trung Cấp',
     duration: 3600 * 30,
-    price: 1000000,
+    price: 500000,
     originalPrice: 1000000,
-    discount: 0,
+    discount: 50,
     discountExpiresAt: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
     description:
       'Nắm vững Framework Vue.js 3, Composition API và xây dựng các ứng dụng đơn trang (SPA) hiệu suất cao.',
@@ -500,9 +500,9 @@ const coursesData: CourseData[] = [
     instructorName: 'Nguyễn Văn An',
     level: 'Cơ Bản',
     duration: 3600 * 50,
-    price: 1000000,
+    price: 500000,
     originalPrice: 1000000,
-    discount: 0,
+    discount: 50,
     discountExpiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
     description:
       'Nền tảng vững chắc để bắt đầu sự nghiệp lập trình web, tạo giao diện và logic cơ bản.',
@@ -7164,10 +7164,9 @@ export const seedCourses1 = async (dataSource: DataSource) => {
   const commentRepo = dataSource.getRepository(Comment);
   const roleRepo = dataSource.getRepository(Role);
 
-  const studentRole = await roleRepo.findOneBy({ roleName: 'student' }); // Thay đổi roleName thành name nếu schema của bạn dùng name
-  const teacherRole = await roleRepo.findOneBy({ roleName: 'teacher' }); // Thay đổi roleName thành name
+  const studentRole = await roleRepo.findOneBy({ roleName: 'student' });
+  const teacherRole = await roleRepo.findOneBy({ roleName: 'teacher' });
 
-  // Hash mật khẩu 1 lần
   const hashedPassword = await bcrypt.hash('123456', 10);
   const createdStudents: User[] = [];
 
@@ -7189,12 +7188,13 @@ export const seedCourses1 = async (dataSource: DataSource) => {
       const emailName = data.instructorName
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
-        .replace(/\s+/g, '.')
+        .replace(/\s+/g, '')
+        .replace(/\./g, '')
         .toLowerCase();
 
       instructor = userRepo.create({
         fullName: data.instructorName,
-        email: `${emailName}@example.com.com`,
+        email: `${emailName}@example.com`,
         password: hashedPassword,
         phone: '09' + Math.floor(Math.random() * 900000000 + 100000000),
         dateOfBirth: '1990-01-01',
@@ -7223,6 +7223,7 @@ export const seedCourses1 = async (dataSource: DataSource) => {
       image: data.image,
       requirements: data.requirements,
       learnings: data.learnings,
+      isLive: true,
       status: 'published',
       category,
       instructor,
@@ -7232,7 +7233,6 @@ export const seedCourses1 = async (dataSource: DataSource) => {
     await courseRepo.save(course);
 
     const allLessons: Lesson[] = [];
-    const seederTimestamp = Date.now();
 
     for (let i = 0; i < data.chapters.length; i++) {
       const chapterData = data.chapters[i];

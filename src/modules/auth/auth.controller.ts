@@ -12,7 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { AuthRequestDto, RegisterDto } from './dto/auth-request.dto';
+import { AuthRequestDto, RegisterDtoAdmin } from './dto/auth-request.dto';
 import { ApiResponse, TApiResponse } from '../../common/bases/api-response';
 import { LoginResponse } from './auth.interface';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -113,9 +113,9 @@ export class AuthController {
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   async register(
-    @Body() registerDto: RegisterDto,
+    @Body() register: RegisterDtoAdmin,
   ): Promise<TApiResponse<null>> {
-    await this.authService.handleRegister(registerDto);
+    await this.authService.handleRegister(register);
     return ApiResponse.success(null, 'Đăng ký thành công');
   }
 

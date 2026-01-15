@@ -1,13 +1,12 @@
 import { Course } from '../../../modules/course/entities/course.entity';
 import { User } from '../../../modules/user/entities/user.entity';
 import {
-  CreateDateColumn,
+  Column,
   Entity,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
   Unique,
-  UpdateDateColumn,
 } from 'typeorm';
 
 @Entity('wishlist')
@@ -24,9 +23,18 @@ export class Wishlist {
   @JoinColumn({ name: 'course_id' })
   course: Course;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  @Column({
+    name: 'created_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
+  @Column({
+    name: 'updated_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+    onUpdate: 'CURRENT_TIMESTAMP',
+  })
   updatedAt: Date;
 }

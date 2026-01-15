@@ -84,7 +84,6 @@ export class CourseController {
     @Query('limit') limit: number = 6,
     @Req() req: RequestWithUser,
   ) {
-    console.log('progressStatus', progressStatus);
     const userId = req.user.sub;
     const result = await this.courseService.handleGetMyLearningCourses(
       { progressStatus, limit, page },
@@ -145,6 +144,20 @@ export class CourseController {
     return ApiResponse.success(reuslt, 'Lấy chi tiết bài học thành công');
   }
 
+  @Get(':courseId/lessons/:lessonId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('teacher', 'admin')
+  async getLessonDetailForTeacher(
+    @Param('courseId') courseId: string,
+    @Param('lessonId') lessonId: string,
+  ) {
+    const reuslt = await this.courseService.handleGetLessonDetailForTeacher(
+      courseId,
+      lessonId,
+    );
+    return ApiResponse.success(reuslt, 'Lấy chi tiết bài học thành công');
+  }
+
   @Post('create')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher')
@@ -157,17 +170,48 @@ export class CourseController {
     return ApiResponse.success(course, 'Tạo khóa học thành công!');
   }
 
-  @Put('update')
+  @Post('edit-logic')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher')
+  async createCourseDraft(
+    @Query('courseId') courseId: string,
+    @Req() req: RequestWithUser,
+  ) {
+    const userId = req.user.sub;
+    const course = await this.courseService.handleCreateCourseDraft(
+      courseId,
+      userId,
+    );
+    return ApiResponse.success(course, 'Tạo khóa học thành công!');
+  }
+
+  @Put('update')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('teacher', 'admin')
   async updateCourse(
     @Body() dto: UpdateCourseDto,
     @Req() req: RequestWithUser,
   ) {
-    console.log('dto: ', dto);
     const userId = req.user.sub;
+    const userRole = req.user.roleName;
     const updatedCourse = await this.courseService.handleUpdateCourse(
       dto,
+      userId,
+      userRole,
+    );
+    return ApiResponse.success(updatedCourse, 'Cập nhật khóa học thành công');
+  }
+
+  @Put('update-child-course')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async updateChildCourse(
+    @Body('childCourseId') childCourseId: string,
+    @Req() req: RequestWithUser,
+  ) {
+    const userId = req.user.sub;
+    const updatedCourse = await this.courseService.handleApproveChildCourse(
+      childCourseId,
       userId,
     );
     return ApiResponse.success(updatedCourse, 'Cập nhật khóa học thành công');
@@ -176,13 +220,25 @@ export class CourseController {
   @Delete('delete')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher')
-  async deleteChapter(
+  async deleteCourse(
     @Body('courseId') courseId: string,
     @Req() req: RequestWithUser,
   ) {
     const userId = req.user.sub;
     await this.courseService.handleDeleteCourse(courseId, userId);
     return ApiResponse.success(null, 'Xóa khóa học thành công!');
+  }
+
+  @Delete('delete-published-course')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('teacher')
+  async deletePublishedCourse(
+    @Body('courseId') courseId: string,
+    @Req() req: RequestWithUser,
+  ) {
+    const userId = req.user.sub;
+    await this.courseService.handleDeletePublishedCourse(courseId, userId);
+    return ApiResponse.success(null, 'Xóa khóa học bản nháp thành công!');
   }
 
   @Get('teacher-filter')
@@ -224,22 +280,29 @@ export class CourseController {
 
   @Get('teacher-detail')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('teacher')
+  @Roles('teacher', 'admin')
   async getTeacherCourseDetail(
     @Query('courseId') courseId: string,
     @Req() req: RequestWithUser,
   ) {
-    const teacherId = req.user.sub;
-    const counts = await this.courseService.handleGetTeacherCourseDetail(
-      teacherId,
+    const userId = req.user.sub;
+    const userRole = req.user.roleName;
+
+    const courseDetail = await this.courseService.handleGetTeacherCourseDetail(
+      userId,
       courseId,
+      userRole === 'admin',
     );
-    return ApiResponse.success(counts, 'Lấy chi tiết khóa học thành công!');
+
+    return ApiResponse.success(
+      courseDetail,
+      'Lấy chi tiết khóa học thành công!',
+    );
   }
 
   @Get('teacher-student-progress')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('teacher')
+  @Roles('teacher', 'admin')
   async getTeacherCourseStudentProgress(
     @Query('courseId') courseId: string,
     @Query('page') page: number = 1,
@@ -247,12 +310,14 @@ export class CourseController {
     @Req() req: RequestWithUser,
   ) {
     const userId = req.user.sub;
+    const isAdmin = req.user.roleName === 'admin';
     const counts =
       await this.courseService.handleGetTeacherCourseStudentProgress(
         courseId,
         userId,
         page,
         limit,
+        isAdmin,
       );
     return ApiResponse.success(
       counts,
@@ -302,5 +367,45 @@ export class CourseController {
     const courses =
       await this.courseService.handleGetTeacherCoursesRevenue(teacherId);
     return ApiResponse.success(courses, 'Lấy danh sách khóa học thành công!');
+  }
+
+  @Get('admin-counts')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async getAdminCourseCounts() {
+    const counts = await this.courseService.handleGetAdminCourseCounts();
+    return ApiResponse.success(counts, 'Lấy thống kê khóa học thành công!');
+  }
+
+  @Get('admin-filter')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async filterAdminCourses(
+    @Query('status') status: string = 'all',
+    @Query('search') search: string = '',
+    @Query('sortBy') sortBy: string = 'newest',
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 6,
+  ) {
+    const result = await this.courseService.handleFilterAdminCourses({
+      status,
+      search,
+      sortBy,
+      page,
+      limit,
+    });
+
+    return ApiResponse.success(result, 'Lọc khóa học của giáo viên thành công');
+  }
+
+  @Get('admin-teacher-course-tree')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async getTeacherCourseTree() {
+    const result = await this.courseService.handleGetTeacherCourseTree();
+    return ApiResponse.success(
+      result,
+      'Lấy danh sách phân cấp giảng viên - khóa học thành công',
+    );
   }
 }

@@ -4,7 +4,6 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
-  CreateDateColumn,
 } from 'typeorm';
 import { Course } from '../../../modules/course/entities/course.entity';
 import { Payment } from '../../../modules/payment/entities/payment.entity';
@@ -25,6 +24,18 @@ export class PaymentItem {
   @Column('decimal', { precision: 15, scale: 2 })
   price: number | null;
 
-  @CreateDateColumn({ type: 'timestamp' })
-  created_at: Date;
+  @Column({
+    name: 'created_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
+  createdAt: Date;
+
+  @Column({
+    name: 'updated_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+    onUpdate: 'CURRENT_TIMESTAMP',
+  })
+  updatedAt: Date;
 }

@@ -1,13 +1,5 @@
 import { QuizQuestion } from '../../../modules/quiz_question/entities/quiz_question.entity';
-import {
-  Entity,
-  Column,
-  ManyToOne,
-  JoinColumn,
-  CreateDateColumn,
-  UpdateDateColumn,
-  PrimaryColumn,
-} from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, PrimaryColumn } from 'typeorm';
 
 @Entity('quiz_option')
 export class QuizOption {
@@ -23,9 +15,18 @@ export class QuizOption {
   @JoinColumn({ name: 'question_id' })
   question: QuizQuestion;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  @Column({
+    name: 'created_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
+  @Column({
+    name: 'updated_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+    onUpdate: 'CURRENT_TIMESTAMP',
+  })
   updatedAt: Date;
 }

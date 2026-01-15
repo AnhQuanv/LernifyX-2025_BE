@@ -21,14 +21,11 @@ const COURSE_TITLES_TO_SEED: string[] = [
 
 const GATEWAYS = ['VNPAY', 'MOMO'];
 const PLATFORM_FEE_RATE = 0.1;
-const FIXED_NUMBER_OF_BUYERS = 10; // Số Buyers ban đầu được tạo
+const FIXED_NUMBER_OF_BUYERS = 10;
 const MAX_MONTHS_TO_SEED = 12;
 
-// Phạm vi giao dịch duy nhất (1-3 người mua khác nhau) cho mỗi khóa học
 const MIN_TRANSACTIONS_PER_MONTH = 1;
 const MAX_TRANSACTIONS_PER_MONTH = 3;
-
-// --- HÀM TIỆN ÍCH ---
 
 const getTargetDatesForLastYear = (maxMonths: number): Date[] => {
   const dates: Date[] = [];
@@ -53,8 +50,6 @@ const getRandomDateInMonth = (targetDate: Date): Date => {
   const resultDate = new Date(year, month, randomDay, randomHour, randomMinute);
   return resultDate;
 };
-
-// --- HÀM SEED CHÍNH ---
 
 export async function paymentSeed(dataSource: DataSource) {
   const paymentRepo = dataSource.getRepository(Payment);
@@ -81,7 +76,6 @@ export async function paymentSeed(dataSource: DataSource) {
     return;
   }
 
-  // 1. Chuẩn bị Buyers (Tạo 10 Buyers ban đầu nếu chưa có)
   const initialBuyerEmails = Array.from(
     { length: FIXED_NUMBER_OF_BUYERS },
     (_, i) => `buyer_${i + 1}@seed-data.com`,
@@ -90,7 +84,6 @@ export async function paymentSeed(dataSource: DataSource) {
     where: { email: In(initialBuyerEmails) },
   });
 
-  // --- Logic đảm bảo 10 Buyers ban đầu tồn tại ---
   let nextBuyerIndex = buyers.length + 1;
   if (buyers.length < FIXED_NUMBER_OF_BUYERS) {
     const existingEmails = new Set(buyers.map((b) => b.email));
@@ -127,8 +120,6 @@ export async function paymentSeed(dataSource: DataSource) {
   console.log(`Tổng số buyers ban đầu sẵn sàng: ${buyers.length}`);
   // ------------------------------------------------
 
-  // Set để theo dõi các cặp (courseId, buyerId) đã được tạo giao dịch
-  // Đảm bảo: User A chỉ mua Course X một lần
   const purchasedPairs = new Set<string>();
 
   const randomRef = () =>
@@ -137,7 +128,6 @@ export async function paymentSeed(dataSource: DataSource) {
   let totalTransactions = 0;
   const targetDates = getTargetDatesForLastYear(MAX_MONTHS_TO_SEED);
 
-  // --- Vòng lặp Chính: Tạo Giao dịch ---
   for (const course of courses) {
     const coursePrice = course.originalPrice as number;
 
@@ -146,16 +136,11 @@ export async function paymentSeed(dataSource: DataSource) {
     const amountPaidByStudent = coursePrice * (1 + PLATFORM_FEE_RATE);
     const finalAmount = parseFloat(amountPaidByStudent.toFixed(2));
 
-    // 2. Tính tổng số giao dịch duy nhất CẦN THIẾT cho khóa học này trong 12 tháng
-    // Số lượng này bằng số lượng Buyers khác nhau cần thiết cho Course này.
     const numUniqueBuyersNeeded =
       Math.floor(
         Math.random() *
           (MAX_TRANSACTIONS_PER_MONTH - MIN_TRANSACTIONS_PER_MONTH + 1),
       ) + MIN_TRANSACTIONS_PER_MONTH;
-
-    const totalTransactionsForCourse =
-      numUniqueBuyersNeeded * MAX_MONTHS_TO_SEED;
 
     for (let i = 0; i < numUniqueBuyersNeeded; i++) {
       let buyer: User | null = null;
@@ -186,7 +171,7 @@ export async function paymentSeed(dataSource: DataSource) {
           });
 
           const savedNewBuyer = await userRepo.save(newBuyer);
-          buyers.push(savedNewBuyer); // Cập nhật danh sách buyers
+          buyers.push(savedNewBuyer);
           nextBuyerIndex++;
 
           buyer = savedNewBuyer;

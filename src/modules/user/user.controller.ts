@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Put, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Put,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -27,13 +36,12 @@ export class UserController {
 
   @Put('edit')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('student', 'teacher')
+  @Roles('student', 'teacher', 'admin')
   async updateProfile(
     @Req() req: RequestWithUser,
     @Body() dto: UpdateProfileDto,
   ) {
     const userId = req.user.sub;
-    console.log('role: ', req.user.roleName);
     const updatedUser = await this.userService.handleUpdateProfile(userId, dto);
     return ApiResponse.success(
       updatedUser,
@@ -51,5 +59,31 @@ export class UserController {
     const userId = req.user.sub;
     await this.userService.handleChangePassword(userId, dto);
     return ApiResponse.success(null, 'Cập nhật mật khẩu thành công');
+  }
+
+  @Delete('delete')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async deleteUsser(@Query('userId') userId: string) {
+    await this.userService.handleDeleteUser(userId);
+    return ApiResponse.success(null, 'Xóa tài khoản thành công');
+  }
+
+  @Get('admin-student')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async getStudentsCourseProgress(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 6,
+    @Query('search') search?: string,
+    @Query('role') role?: string,
+  ) {
+    const result = await this.userService.handleGetStudentsCourseProgress({
+      limit,
+      page,
+      search,
+      role,
+    });
+    return ApiResponse.success(result, 'Lấy danh sách học sinh  thành công');
   }
 }

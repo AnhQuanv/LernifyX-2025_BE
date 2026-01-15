@@ -4,7 +4,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { AuthRequestDto, RegisterDto } from './dto/auth-request.dto';
+import { AuthRequestDto, RegisterDtoAdmin } from './dto/auth-request.dto';
 import { Not, Repository } from 'typeorm';
 import { User } from '../user/entities/user.entity';
 import * as bcrypt from 'bcrypt';
@@ -32,7 +32,6 @@ export class AuthService {
   ) {}
 
   async handleLogin(authRequestDto: AuthRequestDto) {
-    console.log('auth: ', authRequestDto);
     const userRes = await this.validateUser(
       authRequestDto.email,
       authRequestDto.password,
@@ -158,7 +157,7 @@ export class AuthService {
     }
   }
 
-  async handleRegister(registerDto: RegisterDto) {
+  async handleRegister(registerDto: RegisterDtoAdmin) {
     const user = await this.userRepository.findOne({
       where: { email: registerDto.email },
     });
@@ -189,7 +188,8 @@ export class AuthService {
       email: registerDto.email,
       password: hashedPassword,
       fullName: registerDto.fullName,
-      dateOfBirth: registerDto.dateOfBirth,
+      dateOfBirth:
+        registerDto.dateOfBirth === '' ? null : registerDto.dateOfBirth,
       phone: registerDto.phone,
       address: registerDto.address,
       role,

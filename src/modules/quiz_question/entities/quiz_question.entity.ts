@@ -2,13 +2,11 @@ import { Lesson } from '../../../modules/lesson/entities/lesson.entity';
 import { QuizOption } from '../../../modules/quiz_option/entities/quiz_option.entity';
 import {
   Column,
-  CreateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
   OneToMany,
   PrimaryColumn,
-  UpdateDateColumn,
 } from 'typeorm';
 
 @Entity('quiz_question')
@@ -36,9 +34,18 @@ export class QuizQuestion {
   @Column({ type: 'int', default: 0 })
   order: number;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  @Column({
+    name: 'created_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
+  @Column({
+    name: 'updated_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+    onUpdate: 'CURRENT_TIMESTAMP',
+  })
   updatedAt: Date;
 }

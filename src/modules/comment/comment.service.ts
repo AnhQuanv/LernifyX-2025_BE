@@ -75,8 +75,10 @@ export class CommentService {
     const [comments, total] = await this.commentRepository
       .createQueryBuilder('comment')
       .leftJoinAndSelect('comment.user', 'user')
+      .leftJoinAndSelect('user.role', 'role')
       .leftJoinAndSelect('comment.replies', 'reply')
       .leftJoinAndSelect('reply.user', 'replyUser')
+      .leftJoinAndSelect('replyUser.role', 'replyRole')
       .where('comment.lesson_id = :lessonId', { lessonId })
       .andWhere('comment.parent_id IS NULL')
       .orderBy('comment.createdAt', 'DESC')
@@ -94,6 +96,7 @@ export class CommentService {
       user: {
         fullName: c.user.fullName,
         avatar: c.user.avatar,
+        roleName: c.user.role.roleName,
       },
       replies: c.replies.map((r) => ({
         id: r.id,
@@ -104,6 +107,7 @@ export class CommentService {
         updatedAt: r.updatedAt,
         user: {
           fullName: r.user.fullName,
+          roleName: r.user.role.roleName,
           avatar: r.user.avatar,
         },
       })),

@@ -13,7 +13,7 @@ export class LessonVideo {
   })
   lesson: Lesson;
 
-  @Column({ name: 'public_id', type: 'varchar', unique: true })
+  @Column({ name: 'public_id', type: 'varchar' })
   publicId: string;
 
   @Column({ name: 'original_url', type: 'varchar', nullable: true })

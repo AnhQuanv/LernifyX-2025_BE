@@ -52,7 +52,7 @@ export class ProgressGateway
     this.server.to(taskId).emit('upload_complete', { taskId, data });
 
     console.log(
-      `[${now}] ✅ [WS-SUCCESS] Đã phát tín hiệu hoàn thành tới phòng: ${taskId}`,
+      `[${now}]  [WS-SUCCESS] Đã phát tín hiệu hoàn thành tới phòng: ${taskId}`,
     );
   }
 

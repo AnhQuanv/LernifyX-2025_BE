@@ -37,7 +37,6 @@ export class LessonVideoService {
   ) {}
 
   async saveLessonVideo(data: LessonVideoData) {
-    console.log('lesson id: ', data.lessonId);
     const lesson = await this.lessonRepository.findOne({
       where: { id: data.lessonId },
     });
