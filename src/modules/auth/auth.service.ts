@@ -318,12 +318,14 @@ export class AuthService {
     const user = await this.userRepository.findOne({
       where: { email },
     });
+
     if (!user) {
       throw new NotFoundException({
         message: 'Email does not exist',
         errorCode: 'RESOURCE_NOT_FOUND',
       });
     }
+
     const codeId = Math.floor(100000 + Math.random() * 900000);
     const codeExpiresAt = dayjs().add(5, 'minute');
 
@@ -331,18 +333,39 @@ export class AuthService {
     user.codeExpiresAt = codeExpiresAt.toDate();
 
     const savedUser = await this.userRepository.save(user);
-    await this.mailerService.sendMail({
-      to: savedUser.email,
-      subject: 'Reset your LearnifyX password',
-      template: 'reset-password.hbs',
-      context: {
-        name: savedUser.fullName,
-        otpCode: codeId,
-        expiresAtFormatted: codeExpiresAt.format('HH:mm:ss [on] DD/MM/YYYY'),
-      },
-    });
-  }
 
+    // --- PHẦN DEBUG QUAN TRỌNG ---
+    try {
+      // Không nên 'await' nếu bạn muốn FE nhận phản hồi ngay lập tức
+      // và chấp nhận việc mail gửi ngầm (background)
+      this.mailerService
+        .sendMail({
+          to: savedUser.email,
+          subject: 'Reset your LearnifyX password',
+          template: 'reset-password.hbs',
+          context: {
+            name: savedUser.fullName,
+            otpCode: codeId,
+            expiresAtFormatted: codeExpiresAt.format(
+              'HH:mm:ss [on] DD/MM/YYYY',
+            ),
+          },
+        })
+        .catch((mailError) => {
+          // Log lỗi mail nhưng không chặn luồng chính
+          console.error('❌ Background Mail Error:', mailError.message);
+        });
+
+      console.log(`✅ Đã yêu cầu gửi OTP tới ${savedUser.email}`);
+
+      // Luôn trả về kết quả thành công cho Controller sau khi đã lưu DB
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Lỗi xử lý tại handlePasswordForget:', error);
+      // Vẫn trả về thành công nếu DB đã lưu xong, vì OTP đã nằm trong DB
+      return { success: true };
+    }
+  }
   async handleSendVerifyMail(email: string) {
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) {
