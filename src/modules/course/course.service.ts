@@ -1373,11 +1373,11 @@ export class CourseService {
       .andWhere('course.parentId IS NULL')
       .select([
         'COUNT(DISTINCT course.id) AS totalAll',
-        'COUNT(DISTINCT CASE WHEN course.status = "published" THEN course.id END) AS totalPublished',
-        'COUNT(DISTINCT CASE WHEN course.status = "archived" THEN course.id END) AS totalArchived',
-        'COUNT(DISTINCT CASE WHEN course.status = "pending" OR child.status = "pending" THEN course.id END) AS totalPending',
-        'COUNT(DISTINCT CASE WHEN course.status = "draft" OR child.status = "draft" THEN course.id END) AS totalDraft',
-        'COUNT(DISTINCT CASE WHEN course.status = "rejected" OR child.status = "rejected" THEN course.id END) AS totalRejected',
+        "COUNT(DISTINCT CASE WHEN course.status = 'published' THEN course.id END) AS totalPublished",
+        "COUNT(DISTINCT CASE WHEN course.status = 'archived' THEN course.id END) AS totalArchived",
+        "COUNT(DISTINCT CASE WHEN course.status = 'pending' OR child.status = 'pending' THEN course.id END) AS totalPending",
+        "COUNT(DISTINCT CASE WHEN course.status = 'draft' OR child.status = 'draft' THEN course.id END) AS totalDraft",
+        "COUNT(DISTINCT CASE WHEN course.status = 'rejected' OR child.status = 'rejected' THEN course.id END) AS totalRejected",
       ])
       .getRawOne<CourseStatsRaw>();
 

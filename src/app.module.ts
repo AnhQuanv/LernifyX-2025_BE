@@ -116,7 +116,7 @@ import { join } from 'path';
       useFactory: (config: ConfigService) => ({
         transport: {
           host: config.get<string>('MAIL_HOST'), // smtp.gmail.com
-          port: config.get<number>('MAIL_PORT'), // 587
+          port: 587, // 587
           secure: false, // Port 587 luôn đi với false
           auth: {
             user: config.get<string>('MAIL_USER'),
@@ -136,7 +136,6 @@ import { join } from 'path';
           from: `"No Reply" <${config.get<string>('MAIL_USER')}>`,
         },
         template: {
-          // Sử dụng process.cwd() để đường dẫn template luôn đúng trên Production
           dir: join(__dirname, 'mail', 'templates'),
           adapter: new HandlebarsAdapter(),
           options: {
@@ -146,6 +145,7 @@ import { join } from 'path';
       }),
       inject: [ConfigService],
     }),
+
     CourseModule,
     CategoryModule,
     WishlistModule,
