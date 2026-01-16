@@ -15,8 +15,8 @@ import { RefreshToken } from '../refresh-token/entities/refresh-token.entity';
 import { plainToInstance } from 'class-transformer';
 import { UserResponseDto } from '../user/dto/user-response.dto';
 import { Role } from '../role/entities/role.entity';
-import { MailerService } from '@nestjs-modules/mailer';
 import dayjs from 'dayjs';
+import { MailService } from './mail.service';
 
 @Injectable()
 export class AuthService {
@@ -28,7 +28,7 @@ export class AuthService {
     @InjectRepository(RefreshToken)
     private readonly refreshTokenRepository: Repository<RefreshToken>,
     private readonly jwtService: JwtService,
-    private readonly mailerService: MailerService,
+    private readonly mailerService: MailService,
   ) {}
 
   async handleLogin(authRequestDto: AuthRequestDto) {
@@ -157,58 +157,6 @@ export class AuthService {
     }
   }
 
-  // async handleRegister(registerDto: RegisterDtoAdmin) {
-  //   const user = await this.userRepository.findOne({
-  //     where: { email: registerDto.email },
-  //   });
-  //   if (user) {
-  //     throw new BadRequestException({
-  //       message: 'Email đã tồn tại',
-  //       errorCode: 'EMAIL_EXISTS',
-  //     });
-  //   }
-
-  //   const hashedPassword = await bcrypt.hash(registerDto.password, 10);
-
-  //   const role = await this.roleRepository.findOne({
-  //     where: { roleName: registerDto.roleName },
-  //   });
-
-  //   if (!role) {
-  //     throw new NotFoundException({
-  //       message: 'Role không tồn tại',
-  //       errorCode: 'RESOURCE_NOT_FOUND',
-  //     });
-  //   }
-
-  //   const codeId = Math.floor(100000 + Math.random() * 900000);
-  //   const codeExpiresAt = dayjs().add(5, 'minute');
-
-  //   const newUser = this.userRepository.create({
-  //     email: registerDto.email,
-  //     password: hashedPassword,
-  //     fullName: registerDto.fullName,
-  //     dateOfBirth:
-  //       registerDto.dateOfBirth === '' ? null : registerDto.dateOfBirth,
-  //     phone: registerDto.phone,
-  //     address: registerDto.address,
-  //     role,
-  //     codeId,
-  //     codeExpiresAt: codeExpiresAt.toDate(),
-  //   });
-
-  //   const savedUser = await this.userRepository.save(newUser);
-  //   await this.mailerService.sendMail({
-  //     to: savedUser.email,
-  //     subject: 'Activate your LearnifyX account',
-  //     template: 'verify.hbs',
-  //     context: {
-  //       name: savedUser.fullName,
-  //       activationCode: codeId,
-  //       expiresAtFormatted: codeExpiresAt.format('HH:mm:ss [on] DD/MM/YYYY'),
-  //     },
-  //   });
-  // }
   async handleRegister(registerDto: RegisterDtoAdmin) {
     // 1. Kiểm tra tồn tại
     const user = await this.userRepository.findOne({
@@ -221,7 +169,6 @@ export class AuthService {
       });
     }
 
-    // 2. Chuẩn bị dữ liệu
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
     const role = await this.roleRepository.findOne({
       where: { roleName: registerDto.roleName },
@@ -253,18 +200,17 @@ export class AuthService {
 
     const savedUser = await this.userRepository.save(newUser);
 
-    // 4. Gửi Mail (DEBUG: Bọc trong try-catch để tránh treo request)
     try {
-      await this.mailerService.sendMail({
-        to: savedUser.email,
-        subject: 'Activate your LearnifyX account',
-        template: 'verify.hbs',
-        context: {
-          name: savedUser.fullName,
-          activationCode: codeId,
-          expiresAtFormatted: codeExpiresAt.format('HH:mm:ss [on] DD/MM/YYYY'),
-        },
-      });
+      // await this.mailerService.sendMail({
+      //   to: savedUser.email,
+      //   subject: 'Activate your LearnifyX account',
+      //   template: 'verify.hbs',
+      //   context: {
+      //     name: savedUser.fullName,
+      //     activationCode: codeId,
+      //     expiresAtFormatted: codeExpiresAt.format('HH:mm:ss [on] DD/MM/YYYY'),
+      //   },
+      // });
       console.log(`✅ Mail đã gửi thành công tới: ${savedUser.email}`);
     } catch (error) {
       // Nếu mail lỗi, chúng ta log lại để sửa BE nhưng vẫn trả về success cho FE
@@ -339,17 +285,27 @@ export class AuthService {
       console.log(`🚀 Bắt đầu gửi mail tới: ${savedUser.email}...`);
 
       // Tạm thời để await để xem nó timeout mất bao lâu và lỗi chính xác là gì
+      // await this.mailerService.sendMail({
+      //   to: savedUser.email,
+      //   subject: 'Reset your LearnifyX password',
+      //   template: 'reset-password', // Lưu ý: Thường không cần đuôi .hbs nếu đã cấu hình trong Module
+      //   context: {
+      //     name: savedUser.fullName,
+      //     otpCode: codeId,
+      //     expiresAtFormatted: codeExpiresAt.format('HH:mm:ss [on] DD/MM/YYYY'),
+      //   },
+      // });
       await this.mailerService.sendMail({
+        // Sử dụng service mới
         to: savedUser.email,
         subject: 'Reset your LearnifyX password',
-        template: 'reset-password', // Lưu ý: Thường không cần đuôi .hbs nếu đã cấu hình trong Module
+        template: 'reset-password', // MailService mới của bạn sẽ tự thêm .hbs
         context: {
           name: savedUser.fullName,
-          otpCode: codeId,
+          otpCode: codeId, // Khớp với IMailContext (otpCode)
           expiresAtFormatted: codeExpiresAt.format('HH:mm:ss [on] DD/MM/YYYY'),
         },
       });
-
       console.log(`✅ Mail đã gửi thành công tới ${savedUser.email}`);
     } catch (mailError) {
       // In toàn bộ object lỗi để xem code lỗi (ETIMEOUT, EAUTH, v.v.)
@@ -380,16 +336,16 @@ export class AuthService {
 
     await this.userRepository.save(user);
     const savedUser = await this.userRepository.save(user);
-    await this.mailerService.sendMail({
-      to: savedUser.email,
-      subject: 'Verify your LearnifyX account',
-      template: 'verify.hbs',
-      context: {
-        name: savedUser.fullName,
-        activationCode: codeId,
-        expiresAtFormatted: codeExpiresAt.format('HH:mm:ss [on] DD/MM/YYYY'),
-      },
-    });
+    // await this.mailerService.sendMail({
+    //   to: savedUser.email,
+    //   subject: 'Verify your LearnifyX account',
+    //   template: 'verify.hbs',
+    //   context: {
+    //     name: savedUser.fullName,
+    //     activationCode: codeId,
+    //     expiresAtFormatted: codeExpiresAt.format('HH:mm:ss [on] DD/MM/YYYY'),
+    //   },
+    // });
   }
 
   async handleResetPassword(
