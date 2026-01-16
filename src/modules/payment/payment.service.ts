@@ -258,7 +258,6 @@ export class PaymentService {
       payment.paid_at = new Date(year, month, day, hour, minute, second);
     }
 
-    // Lưu toàn bộ callback
     payment.raw_response = query;
 
     await this.paymentRepo.save(payment);
@@ -453,7 +452,6 @@ export class PaymentService {
       );
     }
 
-    // resultCode: 0 = Thành công
     payment.status = query.resultCode === '0' ? 'success' : 'failed';
     payment.gateway_transaction_id = query.transId || null;
     payment.bankCode = query.payType || null;

@@ -72,7 +72,7 @@ export interface CourseRevenueRawResult {
 }
 interface CourseRevenueRaw {
   courseId: string;
-  netRevenue: string; // Kết quả SUM trong SQL thường trả về dạng chuỗi (string)
+  netRevenue: string;
 }
 
 interface CourseRevenueRaw1 {
@@ -132,7 +132,6 @@ export class CourseService {
     }: FilterCoursesDto,
     userId?: string,
   ) {
-    // 1. Tạo query cơ bản
     const query = this.courseRepository
       .createQueryBuilder('course')
       .leftJoinAndSelect('course.category', 'category')
@@ -232,7 +231,7 @@ export class CourseService {
     let courses = await this.courseRepository.find({
       where: { status: 'published' },
       relations: ['category', 'instructor'],
-      order: { students: 'DESC' }, // ưu tiên nhiều học viên
+      order: { students: 'DESC' },
     });
 
     let wishlistCourseIds: string[] = [];
@@ -500,10 +499,8 @@ export class CourseService {
         'COALESCE(SUM(course.students), 0) AS students',
       ])
       .groupBy('user.userId')
-      // Thêm sắp xếp để giảng viên có nhiều học viên/khóa học lên đầu (tùy chọn)
       .orderBy('students', 'DESC');
 
-    // Lấy tổng số giảng viên thỏa mãn (đã publish khóa học)
     const rawDataForAll = await qb.getRawMany();
     const total = rawDataForAll.length;
 
@@ -1075,7 +1072,6 @@ export class CourseService {
         );
       }
 
-      // 2. Tìm bản chính (Parent Course)
       const parentCourse = await manager.findOne(Course, {
         where: { id: childCourse.parentId },
         relations: ['category'],
@@ -1085,8 +1081,6 @@ export class CourseService {
         throw new NotFoundException('Không tìm thấy khóa học gốc để đồng bộ');
       }
 
-      // 3. ĐỒNG BỘ METADATA (Course Level)
-      // Sao chép toàn bộ thông tin từ bản nháp sang bản chính
       parentCourse.title = childCourse.title;
       parentCourse.description = childCourse.description;
       parentCourse.requirements = childCourse.requirements;
@@ -1098,12 +1092,11 @@ export class CourseService {
       parentCourse.level = childCourse.level;
       parentCourse.category = childCourse.category;
       parentCourse.isLive = childCourse.isLive;
-      parentCourse.hasDraft = false; // Tắt cờ báo có bản nháp
-      parentCourse.status = 'published'; // Đảm bảo bản chính luôn là published
+      parentCourse.hasDraft = false;
+      parentCourse.status = 'published';
 
-      // 4. ĐỒNG BỘ CHAPTERS & LESSONS (Deep Sync)
       for (const childChapter of childCourse.chapters) {
-        if (!childChapter.parentId) continue; // Bỏ qua nếu chapter mới không có liên kết gốc
+        if (!childChapter.parentId) continue;
 
         const targetChapter = await manager.findOne(Chapter, {
           where: { id: childChapter.parentId },
@@ -1114,7 +1107,6 @@ export class CourseService {
           targetChapter.order = childChapter.order;
           await manager.save(targetChapter);
 
-          // Đồng bộ Lessons trong Chapter
           for (const childLesson of childChapter.lessons) {
             if (!childLesson.parentId) continue;
 
@@ -1129,9 +1121,7 @@ export class CourseService {
               targetLesson.order = childLesson.order;
               targetLesson.duration = childLesson.duration;
 
-              // Xử lý VideoAsset: Cập nhật thông tin video của bản chính theo bản nháp
               if (childLesson.videoAsset) {
-                // Nếu bản chính đã có videoAsset, ta cập nhật nội dung. Nếu chưa, tạo mới.
                 if (targetLesson.videoAsset) {
                   targetLesson.videoAsset.publicId =
                     childLesson.videoAsset.publicId;
@@ -1151,8 +1141,6 @@ export class CourseService {
                 }
               }
 
-              // Xử lý Quiz: Xóa sạch Quiz cũ ở bản chính và clone từ bản nháp qua
-              // Đây là cách an toàn nhất để đồng bộ Quiz mà không lo vấn đề ID
               await manager.delete(QuizQuestion, {
                 lesson: { id: targetLesson.id },
               });
@@ -1182,9 +1170,8 @@ export class CourseService {
                       question: savedQuiz,
                     });
                   }
-                  // Cập nhật lại ID đáp án đúng sau khi đã có ID các Option mới
                   await manager.update(QuizQuestion, savedQuiz.id, {
-                    correctOptionId: newCorrectId ?? undefined, // Sử dụng nullish coalescing
+                    correctOptionId: newCorrectId ?? undefined,
                   });
                 }
               }
@@ -1194,7 +1181,6 @@ export class CourseService {
         }
       }
 
-      // 5. Cập nhật bản chính và bản nháp
       await manager.save(parentCourse);
 
       childCourse.status = 'published';
@@ -1720,7 +1706,6 @@ export class CourseService {
   }
 
   async handleGetTeacherCoursesRevenuePage(teacherId: string) {
-    // 1. Lấy danh sách khóa học đã xuất bản của giáo viên
     const teacherPublishedCourses = await this.courseRepository.find({
       select: ['id', 'title', 'rating', 'students'],
       where: {
@@ -1735,8 +1720,6 @@ export class CourseService {
 
     const teacherCourseIds = teacherPublishedCourses.map((c) => c.id);
 
-    // 2. Truy vấn doanh thu từ PaymentItem
-    // LƯU Ý: Đặt alias cột là 'courseId' để khớp với logic xử lý bên dưới
     const courseRevenueRaw = await this.paymentItemRepository
       .createQueryBuilder('item')
       .innerJoin('item.payment', 'payment', 'payment.status = :status', {
@@ -1745,13 +1728,12 @@ export class CourseService {
       .where('item.course_id IN (:...courseIds)', {
         courseIds: teacherCourseIds,
       })
-      .select('item.course_id', 'courseId') // Đổi từ 'id' thành 'courseId'
+      .select('item.course_id', 'courseId')
       .addSelect(`SUM(item.price * (1 - :feeRate))`, 'netRevenue')
       .setParameter('feeRate', PLATFORM_FEE_RATE)
       .groupBy('item.course_id')
       .getRawMany<CourseRevenueRaw>();
 
-    // 3. Tạo Map để tra cứu thông tin khóa học nhanh hơn (O(1))
     const courseInfoMap = new Map(
       teacherPublishedCourses.map((c) => [
         c.id,
@@ -1759,7 +1741,6 @@ export class CourseService {
       ]),
     );
 
-    // 4. Kết hợp dữ liệu doanh thu với thông tin khóa học
     const courseRevenueDetails = courseRevenueRaw.map((raw) => {
       const courseId = raw.courseId;
       const netRevenueValue = parseFloat(raw.netRevenue) || 0;
@@ -1768,14 +1749,11 @@ export class CourseService {
       return {
         id: courseId,
         name: courseInfo?.title || 'Khóa học không xác định',
-        rating: courseInfo?.rating || '0', // Trả về string nếu interface yêu cầu string
+        rating: courseInfo?.rating || '0',
         students: courseInfo?.students || 0,
         netRevenue: netRevenueValue,
       };
     });
-
-    // 5. (Tùy chọn) Nếu bạn muốn hiển thị cả những khóa học CÓ doanh thu = 0
-    // mà không có trong bảng PaymentItem, bạn có thể loop qua teacherPublishedCourses thay thế.
 
     return courseRevenueDetails;
   }
@@ -1786,11 +1764,11 @@ export class CourseService {
       .leftJoin('course.childDrafts', 'child')
       .where('course.parentId IS NULL')
       .select([
-        'COUNT(DISTINCT CASE WHEN course.status != "draft" THEN course.id END) AS totalAll',
-        'COUNT(DISTINCT CASE WHEN course.status = "published" THEN course.id END) AS totalPublished',
-        'COUNT(DISTINCT CASE WHEN course.status = "archived" THEN course.id END) AS totalArchived',
-        'COUNT(DISTINCT CASE WHEN course.status = "pending" OR child.status = "pending" THEN course.id END) AS totalPending',
-        'COUNT(DISTINCT CASE WHEN course.status = "rejected" OR child.status = "rejected" THEN course.id END) AS totalRejected',
+        "COUNT(DISTINCT CASE WHEN course.status != 'draft' THEN course.id END) AS totalAll",
+        "COUNT(DISTINCT CASE WHEN course.status = 'published' THEN course.id END) AS totalPublished",
+        "COUNT(DISTINCT CASE WHEN course.status = 'archived' THEN course.id END) AS totalArchived",
+        "COUNT(DISTINCT CASE WHEN course.status = 'pending' OR child.status = 'pending' THEN course.id END) AS totalPending",
+        "COUNT(DISTINCT CASE WHEN course.status = 'rejected' OR child.status = 'rejected' THEN course.id END) AS totalRejected",
       ])
       .getRawOne<Omit<CourseStatsRaw, 'totalDraft'>>();
 
@@ -1945,20 +1923,18 @@ export class CourseService {
 
     const teachers = await this.userRepository
       .createQueryBuilder('user')
-      // Join trực tiếp vào quan hệ courses của User
       .innerJoinAndSelect('user.courses', 'course', 'course.id IN (:...ids)', {
         ids: validCourseIds,
       })
       .select([
-        'user.userId', // Trong Entity là userId
-        'user.fullName', // Trong Entity là fullName
+        'user.userId',
+        'user.fullName',
         'course.id',
         'course.title',
         'course.status',
       ])
       .getMany();
 
-    // 3. Map dữ liệu về cấu trúc Tree và đảm bảo Type-safe
     return teachers.map((user) => ({
       id: user.userId,
       name: user.fullName,

@@ -30,6 +30,11 @@ export class MuxService {
   ) {
     const tokenId = this.configService.get<string>('MUX_TOKEN_ID');
     const tokenSecret = this.configService.get<string>('MUX_TOKEN_SECRET');
+    if (!tokenId || !tokenSecret) {
+      throw new Error(
+        'CRITICAL: MUX_TOKEN_ID hoặc MUX_TOKEN_SECRET chưa được cấu hình trong Environment Variables!',
+      );
+    }
     this.mux = new Mux({
       tokenId: tokenId,
       tokenSecret: tokenSecret,

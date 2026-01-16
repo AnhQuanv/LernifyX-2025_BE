@@ -91,8 +91,8 @@ import { join } from 'path';
       useFactory: (config: ConfigService) => ({
         transport: {
           host: config.get<string>('MAIL_HOST'),
-          port: 465,
-          secure: true,
+          port: 587,
+          secure: false,
           auth: {
             user: config.get<string>('MAIL_USER'),
             pass: config.get<string>('MAIL_PASS'),
@@ -104,7 +104,7 @@ import { join } from 'path';
           logger: true,
         },
         defaults: {
-          from: '"LearnifyX" <banhkute200@gmail.com>',
+          from: `"LearnifyX" <${config.get<string>('MAIL_FROM')}>`,
         },
         preview: config.get<string>('NODE_ENV') !== 'production',
         template: {
