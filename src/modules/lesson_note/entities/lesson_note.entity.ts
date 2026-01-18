@@ -1,12 +1,5 @@
 import { LessonProgress } from '../../../modules/lesson_progress/entities/lesson_progress.entity';
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('lesson_note')
 export class LessonNote {

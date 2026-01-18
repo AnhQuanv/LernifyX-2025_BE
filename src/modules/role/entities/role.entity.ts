@@ -1,12 +1,5 @@
 import { User } from '../../user/entities/user.entity';
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  OneToMany,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('role')
 export class Role {

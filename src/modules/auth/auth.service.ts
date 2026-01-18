@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -70,15 +71,15 @@ export class AuthService {
     if (!user) return null;
 
     if (!user.isActive) {
-      throw new UnauthorizedException({
+      throw new ForbiddenException({
         message: 'Tài khoản chưa được kích hoạt, vui lòng xác minh email.',
         errorCode: 'ACCOUNT_NOT_VERIFIED',
       });
     }
 
     if (user.isDisabled) {
-      throw new UnauthorizedException({
-        message: `Tài khoản của bạn đã bị vô hiệu hóa. Lý do: ${user.disabledReason || 'Không có lý do cụ thể'}.`,
+      throw new ForbiddenException({
+        message: `Tài khoản của bạn đã bị vô hiệu hóa. Lý do: Không có lý do cụ thể.`,
         errorCode: 'ACCOUNT_DISABLED',
       });
     }
@@ -220,7 +221,7 @@ export class AuthService {
       });
       console.log(`✅ Mail đã gửi thành công tới: ${savedUser.email}`);
     } catch (error) {
-      console.error('❌ LỖI GỬI MAIL TRÊN PRODUCTION:', error);
+      console.error('LỖI GỬI MAIL TRÊN PRODUCTION:', error);
     }
 
     return savedUser;
@@ -306,7 +307,7 @@ export class AuthService {
       });
       console.log(`✅ Mail đã gửi thành công tới ${savedUser.email}`);
     } catch (mailError) {
-      console.error('❌ Lỗi Mail Chi Tiết:', {
+      console.error('Lỗi Mail Chi Tiết:', {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
         message: mailError.message,
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment

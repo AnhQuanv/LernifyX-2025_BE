@@ -70,12 +70,6 @@ export class User {
   @Column({ name: 'is_disabled', type: 'boolean', default: false })
   isDisabled: boolean;
 
-  @Column({ name: 'disabled_reason', type: 'text', nullable: true })
-  disabledReason: string | null;
-
-  @Column({ name: 'disabled_at', type: 'timestamp', nullable: true })
-  disabledAt: Date | null;
-
   @OneToMany(() => RefreshToken, (token) => token.user)
   refreshTokens: RefreshToken[];
 

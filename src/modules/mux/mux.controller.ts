@@ -8,6 +8,8 @@ import {
   UseGuards,
   Delete,
   NotFoundException,
+  Param,
+  Get,
 } from '@nestjs/common';
 import { MuxService } from './mux.service';
 import { ConfigService } from '@nestjs/config';

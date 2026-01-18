@@ -56,7 +56,7 @@ export class CloudinaryController {
   ) {}
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('student', 'teacher')
+  @Roles('student', 'teacher', 'admin')
   @Post('imageAvatar')
   @UseInterceptors(FileInterceptor('file'))
   async uploadAvatar(

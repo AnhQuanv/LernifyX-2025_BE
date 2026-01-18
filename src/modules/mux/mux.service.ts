@@ -161,6 +161,7 @@ export class MuxService {
         } catch (error) {
           console.error(
             `[MUX ERROR] Không thể xóa Asset ${lessonVideo.publicId} trên Mux:`,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             error.message,
           );
         }

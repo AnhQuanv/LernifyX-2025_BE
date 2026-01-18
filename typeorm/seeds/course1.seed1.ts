@@ -45,13 +45,6 @@ const sampleOriginalUrl =
 const sampleDuration = 207;
 const sampleWidth = 576;
 const sampleHeight = 360;
-const students = [
-  'Hoàng Thị Bích',
-  'Phan Văn Cường',
-  'Đỗ Mai Hoa',
-  'Vũ Đức Thắng',
-  'Trần Lệ Quyên',
-];
 
 // Hàm tạo ngày ngẫu nhiên
 const createRandomDate = (daysAgo: number) => {
@@ -7161,14 +7154,11 @@ export const seedCourses1 = async (dataSource: DataSource) => {
   const chapterRepo = dataSource.getRepository(Chapter);
   const lessonRepo = dataSource.getRepository(Lesson);
   const lessonVideoRepo = dataSource.getRepository(LessonVideo);
-  const commentRepo = dataSource.getRepository(Comment);
   const roleRepo = dataSource.getRepository(Role);
 
-  const studentRole = await roleRepo.findOneBy({ roleName: 'student' });
   const teacherRole = await roleRepo.findOneBy({ roleName: 'teacher' });
 
   const hashedPassword = await bcrypt.hash('123456', 10);
-  const createdStudents: User[] = [];
 
   for (const data of coursesData) {
     // 1. Category
@@ -7207,17 +7197,7 @@ export const seedCourses1 = async (dataSource: DataSource) => {
 
     const randomDaysAgo = Math.floor(Math.random() * 365);
     const courseCreatedAt = createRandomDate(randomDaysAgo);
-    const randomStudents = Math.floor(Math.random() * (200 - 100 + 1)) + 100;
-    const studentsCount = Math.min(
-      randomStudents + (Math.random() > 0.8 ? 150 : 0),
-      499,
-    );
 
-    const ratingCount = Math.floor(
-      studentsCount * (Math.random() * (0.7 - 0.3) + 0.3),
-    );
-
-    const ratingValue = Number((Math.random() * (5 - 4) + 4).toFixed(1));
     const course = courseRepo.create({
       title: data.title,
       description: data.description,
@@ -7226,9 +7206,12 @@ export const seedCourses1 = async (dataSource: DataSource) => {
       originalPrice: data.originalPrice || null,
       discount: data.discount || null,
       discountExpiresAt: data.discountExpiresAt || null,
-      rating: ratingValue,
-      ratingCount: ratingCount,
-      students: studentsCount,
+      // rating: Number((Math.random() * (5 - 4) + 4).toFixed(1)),
+      // ratingCount: Math.floor(Math.random() * 1001) + 50,
+      // students: Math.floor(Math.random() * (1000 - 100 + 1)) + 100,
+      students: 0,
+      ratingCount: 0,
+      rating: 0,
       level: data.level,
       image: data.image,
       requirements: data.requirements,
@@ -7278,65 +7261,6 @@ export const seedCourses1 = async (dataSource: DataSource) => {
           heightOriginal: sampleHeight,
         });
         await lessonVideoRepo.save(videoAsset);
-      }
-    }
-
-    for (const name of students) {
-      const emailName = name
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/\s+/g, '.')
-        .toLowerCase();
-      const studentEmail = `${emailName}@example.com`;
-      let reviewer = await userRepo.findOne({
-        where: { email: studentEmail },
-      });
-      if (!reviewer) {
-        reviewer = userRepo.create({
-          fullName: name,
-          email: `${emailName}@example.com`,
-          password: hashedPassword,
-          phone: '09' + Math.floor(Math.random() * 900000000 + 100000000),
-          dateOfBirth: '1995-01-01',
-          address: 'TP. Hồ Chí Minh, Việt Nam',
-          isActive: true,
-          role: studentRole ?? undefined,
-        });
-        await userRepo.save(reviewer);
-        createdStudents.push(reviewer);
-      }
-
-      const courseComment = commentRepo.create({
-        content: `Khóa học "${data.title}" rất hay và thực tế! Tôi học được rất nhiều từ giảng viên ${data.instructorName}. Nội dung chương trình rất chi tiết, xứng đáng 5 sao.`,
-        rating: Math.floor(Math.random() * 2) + 4,
-        user: reviewer,
-        type: 'course',
-        course,
-        createdAt: createRandomDate(Math.floor(Math.random() * 180)),
-      });
-      await commentRepo.save(courseComment);
-
-      if (allLessons.length > 0) {
-        const randomIndexes: number[] = [];
-        while (
-          randomIndexes.length < 2 &&
-          randomIndexes.length < allLessons.length
-        ) {
-          const r = Math.floor(Math.random() * allLessons.length);
-          if (randomIndexes.indexOf(r) === -1) randomIndexes.push(r);
-        }
-
-        for (const index of randomIndexes) {
-          const lesson = allLessons[index];
-          const lessonComment = commentRepo.create({
-            content: `Bài giảng "${lesson.title}" trong chương ${lesson.chapter.title} rất dễ hiểu và có ví dụ thực tế.`,
-            user: reviewer,
-            lesson: lesson,
-            type: 'lesson',
-            createdAt: createRandomDate(Math.floor(Math.random() * 90)),
-          });
-          await commentRepo.save(lessonComment);
-        }
       }
     }
   }

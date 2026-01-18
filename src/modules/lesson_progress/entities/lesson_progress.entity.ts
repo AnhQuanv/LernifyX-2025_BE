@@ -3,13 +3,11 @@ import { Lesson } from '../../../modules/lesson/entities/lesson.entity';
 import { User } from '../../../modules/user/entities/user.entity';
 import {
   Column,
-  CreateDateColumn,
   Entity,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   Unique,
-  UpdateDateColumn,
 } from 'typeorm';
 
 @Entity('lesson_progress')

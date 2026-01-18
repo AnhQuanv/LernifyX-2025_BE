@@ -1,12 +1,5 @@
 import { Course } from '../../../modules/course/entities/course.entity';
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  OneToMany,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('category')
 export class Category {

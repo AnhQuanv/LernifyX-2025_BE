@@ -3,7 +3,7 @@ import { seedUsers } from '../typeorm/seeds/user.seed';
 import { dataSource } from './typeorm.config';
 import { seedLessonProgress } from '../typeorm/seeds/lesson-progress.seed';
 import { seedLessonCommentsWithRandomUsers } from '../typeorm/seeds/commentLesson.seed';
-import { seedQuiz } from '../typeorm/seeds/quiz.seed';
+import { seedQuiz1 } from '../typeorm/seeds/quiz.seed1';
 import { seedUserPreferences } from '../typeorm/seeds/user-preference.seed';
 import { seedCourses1 } from '../typeorm/seeds/course1.seed';
 import { paymentSeedFor12Month } from '../typeorm/seeds/payment-random-12-months.seed';
@@ -18,7 +18,8 @@ const runSeed = async () => {
     await seedCourses1(dataSource);
     await seedLessonProgress(dataSource);
     await seedLessonCommentsWithRandomUsers(dataSource);
-    await seedQuiz(dataSource);
+    // await seedQuiz(dataSource);
+    await seedQuiz1(dataSource);
     await seedUserPreferences(dataSource);
     await paymentSeedFor12Month(dataSource);
     await dataSource.destroy();
