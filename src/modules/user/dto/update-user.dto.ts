@@ -55,6 +55,10 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isDisabled?: boolean;
 }
 
 export class UpdatePasswordDto {

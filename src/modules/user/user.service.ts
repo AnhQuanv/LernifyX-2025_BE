@@ -80,6 +80,7 @@ export class UserService {
     if (dto.bio) user.bio = dto.bio;
     if (dto.password) user.password = dto.password;
     if (dto.isActive) user.isActive = dto.isActive;
+    if (dto.isDisabled) user.isDisabled = dto.isDisabled;
     await this.userRepo.save(user);
     const userDTO = plainToInstance(UserResponseDto, user, {
       excludeExtraneousValues: true,
@@ -255,6 +256,7 @@ export class UserService {
         address: user.address,
         dateOfBirth: user.dateOfBirth,
         createdAt: user.createdAt.toISOString().split('T')[0],
+        isDisabled: user.isDisabled,
         course: coursesResult,
       };
     });

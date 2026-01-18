@@ -54,6 +54,7 @@ export class PaymentController {
         gateway,
       );
 
+      //tạo link thanh toán qua cổng VNPay
       const paymentUrl = await this.paymentService.handleVNPay(
         payment,
         clientIp,

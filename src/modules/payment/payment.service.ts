@@ -109,7 +109,7 @@ export class PaymentService {
       vnp_CreateDate: Number(formatDate(now)),
       vnp_ExpireDate: Number(formatDate(expire)),
     });
-
+    console.log('vnp_TxnRef:', payment.transaction_ref);
     payment.pay_url = vnPayResponse;
     await this.paymentRepo.save(payment);
 

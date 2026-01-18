@@ -76,6 +76,13 @@ export class AuthService {
       });
     }
 
+    if (user.isDisabled) {
+      throw new UnauthorizedException({
+        message: `Tài khoản của bạn đã bị vô hiệu hóa. Lý do: ${user.disabledReason || 'Không có lý do cụ thể'}.`,
+        errorCode: 'ACCOUNT_DISABLED',
+      });
+    }
+
     const isPasswordValid = await bcrypt.compare(pass, user.password);
     if (!isPasswordValid) return null;
 
@@ -201,27 +208,22 @@ export class AuthService {
     const savedUser = await this.userRepository.save(newUser);
 
     try {
-      // await this.mailerService.sendMail({
-      //   to: savedUser.email,
-      //   subject: 'Activate your LearnifyX account',
-      //   template: 'verify.hbs',
-      //   context: {
-      //     name: savedUser.fullName,
-      //     activationCode: codeId,
-      //     expiresAtFormatted: codeExpiresAt.format('HH:mm:ss [on] DD/MM/YYYY'),
-      //   },
-      // });
+      await this.mailerService.sendMail({
+        to: savedUser.email,
+        subject: 'Activate your LearnifyX account',
+        template: 'verify.hbs',
+        context: {
+          name: savedUser.fullName,
+          activationCode: codeId,
+          expiresAtFormatted: codeExpiresAt.format('HH:mm:ss [on] DD/MM/YYYY'),
+        },
+      });
       console.log(`✅ Mail đã gửi thành công tới: ${savedUser.email}`);
     } catch (error) {
-      // Nếu mail lỗi, chúng ta log lại để sửa BE nhưng vẫn trả về success cho FE
-      // Hoặc throw ra một lỗi rõ ràng hơn để FE xử lý
       console.error('❌ LỖI GỬI MAIL TRÊN PRODUCTION:', error);
-
-      // Tùy chọn: Nếu muốn người dùng biết mail lỗi nhưng tài khoản vẫn được tạo
-      // return { message: 'Tạo tài khoản thành công nhưng gửi mail lỗi' };
     }
 
-    return savedUser; // Trả về để Controller trả về 201 cho Frontend
+    return savedUser;
   }
 
   async handleVerifyMail(email: string, codeId: number) {
@@ -279,12 +281,9 @@ export class AuthService {
     user.codeExpiresAt = codeExpiresAt.toDate();
 
     const savedUser = await this.userRepository.save(user);
-
-    // --- PHẦN DEBUG QUAN TRỌNG ---
     try {
-      console.log(`🚀 Bắt đầu gửi mail tới: ${savedUser.email}...`);
+      console.log(` Bắt đầu gửi mail tới: ${savedUser.email}...`);
 
-      // Tạm thời để await để xem nó timeout mất bao lâu và lỗi chính xác là gì
       // await this.mailerService.sendMail({
       //   to: savedUser.email,
       //   subject: 'Reset your LearnifyX password',
@@ -296,22 +295,23 @@ export class AuthService {
       //   },
       // });
       await this.mailerService.sendMail({
-        // Sử dụng service mới
         to: savedUser.email,
         subject: 'Reset your LearnifyX password',
-        template: 'reset-password', // MailService mới của bạn sẽ tự thêm .hbs
+        template: 'reset-password',
         context: {
           name: savedUser.fullName,
-          otpCode: codeId, // Khớp với IMailContext (otpCode)
+          otpCode: codeId,
           expiresAtFormatted: codeExpiresAt.format('HH:mm:ss [on] DD/MM/YYYY'),
         },
       });
       console.log(`✅ Mail đã gửi thành công tới ${savedUser.email}`);
     } catch (mailError) {
-      // In toàn bộ object lỗi để xem code lỗi (ETIMEOUT, EAUTH, v.v.)
       console.error('❌ Lỗi Mail Chi Tiết:', {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
         message: mailError.message,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
         code: mailError.code,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
         command: mailError.command,
       });
     }
@@ -336,16 +336,16 @@ export class AuthService {
 
     await this.userRepository.save(user);
     const savedUser = await this.userRepository.save(user);
-    // await this.mailerService.sendMail({
-    //   to: savedUser.email,
-    //   subject: 'Verify your LearnifyX account',
-    //   template: 'verify.hbs',
-    //   context: {
-    //     name: savedUser.fullName,
-    //     activationCode: codeId,
-    //     expiresAtFormatted: codeExpiresAt.format('HH:mm:ss [on] DD/MM/YYYY'),
-    //   },
-    // });
+    await this.mailerService.sendMail({
+      to: savedUser.email,
+      subject: 'Verify your LearnifyX account',
+      template: 'verify.hbs',
+      context: {
+        name: savedUser.fullName,
+        activationCode: codeId,
+        expiresAtFormatted: codeExpiresAt.format('HH:mm:ss [on] DD/MM/YYYY'),
+      },
+    });
   }
 
   async handleResetPassword(
