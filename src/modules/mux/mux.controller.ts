@@ -8,8 +8,6 @@ import {
   UseGuards,
   Delete,
   NotFoundException,
-  Param,
-  Get,
 } from '@nestjs/common';
 import { MuxService } from './mux.service';
 import { ConfigService } from '@nestjs/config';
@@ -36,6 +34,7 @@ interface MuxWebhookPayload {
 }
 
 interface MuxPassthrough {
+  courseId: string;
   lessonId: string;
   taskId: string;
 }
@@ -57,6 +56,7 @@ export class MuxController {
   async getUploadUrl(
     @Body('lessonId') lessonId: string,
     @Body('taskId') taskId: string,
+    @Body('courseId') courseId: string,
   ) {
     const lesson = await this.lessonRepository.findOne({
       where: { id: lessonId },
@@ -66,6 +66,7 @@ export class MuxController {
       throw new NotFoundException(`Không tìm thấy bài học với ID: ${lessonId}`);
     }
     const uploadData = await this.muxService.createSignedUploadUrl(
+      courseId,
       lessonId,
       taskId,
     );
@@ -99,7 +100,7 @@ export class MuxController {
         console.log('[WEBHOOK] Xác thực Mux thành công!');
       } catch (err) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        console.error('❌ Xác thực Webhook Mux thất bại:', err.message);
+        console.error('Xác thực Webhook Mux thất bại:', err.message);
         throw new UnauthorizedException('Chữ ký Webhook không hợp lệ.');
       }
     } // 3. PARSE JSON sau khi xác thực thành công
@@ -111,12 +112,13 @@ export class MuxController {
     console.log(`[MUX WEBHOOK] Asset ID: ${data.data.id}`);
     if (data.type === 'video.asset.ready') {
       const passthrough = JSON.parse(data.data.passthrough) as MuxPassthrough;
-      const { lessonId, taskId } = passthrough;
+      const { courseId, lessonId, taskId } = passthrough;
 
       const videoDataToSave = {
         playbackId: data.data.playback_ids[0].id,
         assetId: data.data.id,
         lessonId: lessonId,
+        courseId: courseId,
       };
 
       const savedVideo =

@@ -7,6 +7,7 @@ import { Lesson } from '../lesson/entities/lesson.entity';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 import { MuxModule } from '../mux/mux.module';
 import { LessonModule } from '../lesson/lesson.module';
+import { CourseModule } from '../course/course.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { LessonModule } from '../lesson/lesson.module';
     forwardRef(() => CloudinaryModule),
     forwardRef(() => MuxModule),
     forwardRef(() => LessonModule),
+    forwardRef(() => CourseModule),
   ],
   controllers: [LessonVideoController],
   providers: [LessonVideoService],

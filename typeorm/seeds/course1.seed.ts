@@ -7188,7 +7188,7 @@ export const seedCourses1 = async (dataSource: DataSource) => {
         `Chuyên gia ${data.categoryName} với hơn 10 năm kinh nghiệm.`,
         `Giảng viên tâm huyết trong lĩnh vực ${data.categoryName}.`,
         `Kỹ sư phần mềm, chuyên gia đào tạo ${data.categoryName}.`,
-        `Nhà đào tạo xuất sắc tại ${data.instructorName} Academy.`,
+        `Nhà đào tạo xuất sắc tại ${data.instructorName} LearnifyX.`,
         `Chuyên gia tư vấn và giảng dạy ${data.categoryName}.`,
         `Hơn 5 năm kinh nghiệm thực chiến ${data.categoryName}.`,
       ];

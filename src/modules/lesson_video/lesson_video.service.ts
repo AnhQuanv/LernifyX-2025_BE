@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import { v2 as Cloudinary } from 'cloudinary';
 import { MuxService } from '../mux/mux.service';
 import { LessonService } from '../lesson/lesson.service';
+import { CourseService } from '../course/course.service';
 
 export interface VideoUrlsResult {
   id: string;
@@ -22,6 +23,7 @@ export interface LessonVideoData {
   playbackId: string;
   assetId: string;
   lessonId: string;
+  courseId: string;
 }
 @Injectable()
 export class LessonVideoService {
@@ -34,6 +36,7 @@ export class LessonVideoService {
     private readonly cloudinary: typeof Cloudinary,
     private readonly muxService: MuxService,
     private readonly lessonService: LessonService,
+    private readonly courseService: CourseService,
   ) {}
 
   async saveLessonVideo(data: LessonVideoData) {
@@ -48,7 +51,7 @@ export class LessonVideoService {
     const newVideoAsset = this.lessonVideoRepository.create({
       publicId: data.assetId,
       originalUrl: `https://stream.mux.com/${data.playbackId}.m3u8`,
-      duration: muxDetails.duration,
+      duration: Math.round(muxDetails.duration),
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       widthOriginal: muxDetails.width,
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -61,6 +64,7 @@ export class LessonVideoService {
       id: data.lessonId,
       duration: newVideoAsset.duration,
     });
+    await this.courseService.updateCourseDuration(data.courseId);
     return {
       id: savedVideo.id,
       originalUrl: savedVideo.originalUrl,

@@ -1945,4 +1945,24 @@ export class CourseService {
       })),
     }));
   }
+
+  async updateCourseDuration(courseId: string) {
+    const result = await this.courseRepository
+      .createQueryBuilder('course')
+      .leftJoin('course.chapters', 'chapter')
+      .leftJoin('chapter.lessons', 'lesson')
+      .where('course.id = :courseId', { courseId })
+      .select('SUM(COALESCE(lesson.duration, 0))', 'totalDuration')
+      .getRawOne<{ totalDuration: string | number | null }>();
+
+    const totalDurationRaw = result?.totalDuration ?? '0';
+    const durationValue =
+      typeof totalDurationRaw === 'string'
+        ? parseInt(totalDurationRaw, 10)
+        : Number(totalDurationRaw);
+
+    await this.courseRepository.update(courseId, {
+      duration: durationValue || 0,
+    });
+  }
 }

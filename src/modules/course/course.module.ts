@@ -36,5 +36,6 @@ import { LessonProgress } from '../lesson_progress/entities/lesson_progress.enti
   ],
   controllers: [CourseController],
   providers: [CourseService],
+  exports: [CourseService],
 })
 export class CourseModule {}

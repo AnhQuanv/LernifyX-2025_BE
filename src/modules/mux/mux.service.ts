@@ -41,7 +41,11 @@ export class MuxService {
     });
   }
 
-  async createSignedUploadUrl(lessonId: string, taskId: string) {
+  async createSignedUploadUrl(
+    courseId: string,
+    lessonId: string,
+    taskId: string,
+  ) {
     try {
       const tokenSecret = this.configService.get<string>('MUX_TOKEN_SECRET');
       console.log(
@@ -61,7 +65,7 @@ export class MuxService {
       }
       const upload = await this.mux.video.uploads.create({
         new_asset_settings: {
-          passthrough: JSON.stringify({ lessonId, taskId }),
+          passthrough: JSON.stringify({ courseId, lessonId, taskId }),
           playback_policy: ['public'],
         },
         timeout: 3600,
