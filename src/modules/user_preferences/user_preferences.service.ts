@@ -480,11 +480,32 @@ export class UserPreferencesService {
       },
     );
 
-    const topCourses = scoredCourses
+    const preferredLevels = (userPreference.desiredLevels || []).map((level) =>
+      level.toLowerCase().trim(),
+    );
+
+    const top20ByScore = scoredCourses
       .sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0))
       .slice(0, topN);
 
-    const formatted = plainToInstance(CourseDto, topCourses, {
+    const sortedTopCourses = top20ByScore.sort((a, b) => {
+      const aMatchesLevel =
+        a.level && preferredLevels.includes(a.level.toLowerCase().trim())
+          ? 1
+          : 0;
+      const bMatchesLevel =
+        b.level && preferredLevels.includes(b.level.toLowerCase().trim())
+          ? 1
+          : 0;
+
+      if (aMatchesLevel !== bMatchesLevel) {
+        return bMatchesLevel - aMatchesLevel;
+      }
+
+      return 0;
+    });
+
+    const formatted = plainToInstance(CourseDto, sortedTopCourses, {
       excludeExtraneousValues: true,
     }).map((course) => ({
       ...course,

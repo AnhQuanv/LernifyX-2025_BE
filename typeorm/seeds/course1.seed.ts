@@ -33,13 +33,13 @@ interface CourseData {
   description: string;
   learnings: string[];
   requirements: string[];
-  image: string;
+  image?: string;
   chapters: ChapterData[];
 }
 
-// --- Dữ liệu Cố định ---
 const sampleImageUrl =
-  'https://res.cloudinary.com/drc4b7rmj/image/upload/v1765697944/fviba233pcpwe3v2h5zo.jpg';
+  'https://res.cloudinary.com/drc4b7rmj/image/upload/v1768789610/vbe4kndubkbwfmxzr4th.jpg';
+
 const sampleOriginalUrl =
   'https://stream.mux.com/J02MyoiL7n4184AXGA01SL02kgaZCNcHgi1hOsy7HOOES00.m3u8';
 const sampleDuration = 207;
@@ -7120,7 +7120,6 @@ const coursesData: CourseData[] = [
       'Hiểu về Chi phí và Tối ưu hóa Tài nguyên Database Cloud',
     ],
     requirements: ['Kinh nghiệm SQL và kiến thức Cloud cơ bản'],
-    image: sampleImageUrl,
     chapters: [
       {
         title: 'Chương 1: RDS và Quản trị Cloud',
@@ -7185,6 +7184,30 @@ export const seedCourses1 = async (dataSource: DataSource) => {
       where: { fullName: data.instructorName },
     });
     if (!instructor) {
+      const bioTemplates = [
+        `Chuyên gia ${data.categoryName} với hơn 10 năm kinh nghiệm.`,
+        `Giảng viên tâm huyết trong lĩnh vực ${data.categoryName}.`,
+        `Kỹ sư phần mềm, chuyên gia đào tạo ${data.categoryName}.`,
+        `Nhà đào tạo xuất sắc tại ${data.instructorName} Academy.`,
+        `Chuyên gia tư vấn và giảng dạy ${data.categoryName}.`,
+        `Hơn 5 năm kinh nghiệm thực chiến ${data.categoryName}.`,
+      ];
+
+      const descTemplates = [
+        `Khóa học do ${data.instructorName} giảng dạy tập trung vào ${data.title}.`,
+        `Học ${data.title} cùng ${data.instructorName} để làm chủ kiến thức thực tế.`,
+        `Chương trình đào tạo ${data.title} bài bản từ cơ bản đến nâng cao.`,
+        `Khám phá lộ trình thành thạo ${data.categoryName} cùng chuyên gia.`,
+      ];
+      const avatars = [
+        'https://res.cloudinary.com/drc4b7rmj/image/upload/v1768791372/swh0yytj96ud6swdevns.jpg',
+        'https://res.cloudinary.com/drc4b7rmj/image/upload/v1768482291/Avatar/avatar_1768482290207.jpg',
+      ];
+      const randomBio =
+        bioTemplates[Math.floor(Math.random() * bioTemplates.length)];
+      const randomDesc =
+        descTemplates[Math.floor(Math.random() * descTemplates.length)];
+      const randomAvatar = avatars[Math.floor(Math.random() * avatars.length)];
       const emailName = data.instructorName
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
@@ -7201,6 +7224,9 @@ export const seedCourses1 = async (dataSource: DataSource) => {
         address: 'Hà Nội, Việt Nam',
         isActive: true,
         role: teacherRole ?? undefined,
+        bio: randomBio,
+        description: randomDesc,
+        avatar: randomAvatar,
       });
       await userRepo.save(instructor);
     }
@@ -7216,8 +7242,46 @@ export const seedCourses1 = async (dataSource: DataSource) => {
     const ratingCount = Math.floor(
       studentsCount * (Math.random() * (0.7 - 0.3) + 0.3),
     );
-
     const ratingValue = Number((Math.random() * (5 - 4) + 4).toFixed(1));
+    const listUrl = [
+      {
+        id: 1,
+        url: 'https://res.cloudinary.com/drc4b7rmj/image/upload/v1768789610/vbe4kndubkbwfmxzr4th.jpg',
+      },
+      {
+        id: 2,
+        url: 'https://res.cloudinary.com/drc4b7rmj/image/upload/v1768789593/xxxoe72gk7ov5w3ee34s.jpg',
+      },
+      {
+        id: 3,
+        url: 'https://res.cloudinary.com/drc4b7rmj/image/upload/v1768789589/ngrhv8lsmfvozh7bgdy7.jpg',
+      },
+      {
+        id: 4,
+        url: 'https://res.cloudinary.com/drc4b7rmj/image/upload/v1768789567/fmuefwjso6latebak7vk.jpg',
+      },
+      {
+        id: 5,
+        url: 'https://res.cloudinary.com/drc4b7rmj/image/upload/v1768789564/jsq4wz9jeixv56ug5u9e.jpg',
+      },
+      {
+        id: 6,
+        url: 'https://res.cloudinary.com/drc4b7rmj/image/upload/v1768789387/qrwewlh8xahosnpdvwok.jpg',
+      },
+      {
+        id: 7,
+        url: 'https://res.cloudinary.com/drc4b7rmj/image/upload/v1768789363/ef5w1vdg75oxpsg7x4fc.jpg',
+      },
+      {
+        id: 8,
+        url: 'https://res.cloudinary.com/drc4b7rmj/image/upload/v1768789300/bl8ecngnv9qbsum9bs5n.jpg',
+      },
+      {
+        id: 9,
+        url: 'https://res.cloudinary.com/drc4b7rmj/image/upload/v1768789923/doybmerq24xiddfjkeyu.jpg',
+      },
+    ];
+    const randomImage = listUrl[Math.floor(Math.random() * listUrl.length)].url;
     const course = courseRepo.create({
       title: data.title,
       description: data.description,
@@ -7230,7 +7294,7 @@ export const seedCourses1 = async (dataSource: DataSource) => {
       ratingCount: ratingCount,
       students: studentsCount,
       level: data.level,
-      image: data.image,
+      image: randomImage,
       requirements: data.requirements,
       learnings: data.learnings,
       isLive: true,

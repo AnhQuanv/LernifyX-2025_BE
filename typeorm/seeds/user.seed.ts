@@ -46,6 +46,16 @@ export const seedUsers = async (dataSource: DataSource) => {
       role: teacherRole,
       isActive: true,
     },
+    {
+      fullName: 'Trần Văn C',
+      email: 'd@example.com',
+      password: '123456',
+      phone: '0923456789',
+      dateOfBirth: '1992-08-20',
+      address: 'Đà Nẵng',
+      role: studentRole,
+      isActive: true,
+    },
   ];
 
   for (const user of plainUsers) {

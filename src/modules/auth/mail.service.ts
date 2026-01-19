@@ -97,7 +97,6 @@ export class MailService {
   private readonly resend: Resend;
 
   constructor(private configService: ConfigService) {
-    // Khởi tạo Resend với API Key từ .env
     this.resend = new Resend(this.configService.get<string>('RESEND_API_KEY')); //
   }
 

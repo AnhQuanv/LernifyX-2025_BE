@@ -608,16 +608,16 @@ export class CourseService {
       ? lesson.quizQuestions
           .sort((a, b) => a.order - b.order)
           .map((q) => {
-            const optionsText = q.options.map((o) => o.text);
-            const correctAnswerIndex = q.options.findIndex(
-              (o) => o.id === q.correctOptionId,
-            );
+            const options = q.options.map((o) => ({
+              id: o.id,
+              text: o.text,
+            }));
 
             return {
               id: q.id,
               question: q.question,
-              options: optionsText,
-              correctAnswer: correctAnswerIndex,
+              options: options,
+              correctOptionId: q.correctOptionId,
             };
           })
       : [];

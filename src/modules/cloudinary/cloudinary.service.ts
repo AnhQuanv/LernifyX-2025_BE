@@ -87,7 +87,7 @@ export class CloudinaryService {
     return new Promise((resolve, reject) => {
       const uploadStream = this.cloudinary.uploader.upload_stream(
         {
-          folder: 'temp',
+          folder: 'ImageCourse',
           resource_type: 'image',
           public_id: publicId,
         },
