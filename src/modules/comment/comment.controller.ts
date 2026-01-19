@@ -33,7 +33,7 @@ export class CommentController {
     );
     return ApiResponse.success(
       result,
-      'Lấy danh sách bình luận khóa học thành công',
+      'Lấy danh sách đánh giá khóa học thành công',
     );
   }
 
@@ -50,7 +50,7 @@ export class CommentController {
     );
     return ApiResponse.success(
       comments,
-      'Lấy danh sách bình luận bài học thành công',
+      'Lấy danh sách bình luận bài giảng thành công',
     );
   }
 

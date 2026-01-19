@@ -214,7 +214,7 @@ export async function paymentSeedFor12Month(dataSource: DataSource) {
                 Math.floor(Math.random() * COURSE_REVIEW_TEXTS.length)
               ],
             type: 'course',
-            rating: Math.floor(Math.random() * 2) + 4, // Chỉ random 4 hoặc 5 sao
+            rating: Math.floor(Math.random() * 2) + 4,
             createdAt: paidDate,
           }),
         );
