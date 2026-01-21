@@ -151,10 +151,9 @@ export class CourseService {
     }
 
     if (search?.trim()) {
-      query.andWhere(
-        '(course.title LIKE :search OR course.description LIKE :search OR instructor.fullName LIKE :search)',
-        { search: `%${search}%` },
-      );
+      query.andWhere('LOWER(course.title) LIKE LOWER(:search)', {
+        search: `%${search}%`,
+      });
     }
 
     switch (sortBy) {
@@ -279,7 +278,11 @@ export class CourseService {
     userId?: string,
   ): Promise<CourseDetailDto> {
     const course = await this.courseRepository.findOne({
-      where: { id: courseId, status: 'published' },
+      where: {
+        id: courseId,
+        status: In(['published', 'archived']),
+        isLive: true,
+      },
       relations: [
         'category',
         'instructor',
@@ -526,7 +529,11 @@ export class CourseService {
     userId: string,
   ) {
     const course = await this.courseRepository.findOne({
-      where: { id: courseId, status: 'published' },
+      where: {
+        id: courseId,
+        status: In(['published', 'archived']),
+        isLive: true,
+      },
       relations: [
         'chapters',
         'chapters.lessons',

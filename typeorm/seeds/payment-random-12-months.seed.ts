@@ -217,6 +217,7 @@ export async function paymentSeedFor12Month(dataSource: DataSource) {
             transaction_ref: `TXN_${paidDate.getTime()}_${Math.floor(Math.random() * 1000)}`,
             paid_at: paidDate,
             message: `Học viên ${fullName} tham gia khóa học`,
+            created_at: paidDate,
           }),
         );
 
