@@ -39,6 +39,7 @@ import { v2 as Cloudinary } from 'cloudinary';
 import { PaymentItem } from '../payment_items/entities/payment_item.entity';
 import { LessonVideo } from '../lesson_video/entities/lesson_video.entity';
 import { v4 as uuidv4 } from 'uuid';
+import moment from 'moment-timezone';
 import { QuizOption } from '../quiz_option/entities/quiz_option.entity';
 import { QuizQuestion } from '../quiz_question/entities/quiz_question.entity';
 import { Lesson } from '../lesson/entities/lesson.entity';
@@ -1068,8 +1069,155 @@ export class CourseService {
     });
   }
 
+  // async handleApproveChildCourse(childCourseId: string, adminId: string) {
+  //   return await this.dataSource.transaction(async (manager) => {
+  //     const childCourse = await manager.findOne(Course, {
+  //       where: { id: childCourseId },
+  //       relations: [
+  //         'instructor',
+  //         'category',
+  //         'chapters',
+  //         'chapters.lessons',
+  //         'chapters.lessons.videoAsset',
+  //         'chapters.lessons.quizQuestions',
+  //         'chapters.lessons.quizQuestions.options',
+  //       ],
+  //     });
+
+  //     if (!childCourse) {
+  //       throw new NotFoundException('Không tìm thấy bản nháp khóa học');
+  //     }
+
+  //     if (!childCourse.parentId) {
+  //       throw new BadRequestException(
+  //         'Khóa học này không phải là bản nháp (không có ParentId)',
+  //       );
+  //     }
+
+  //     const parentCourse = await manager.findOne(Course, {
+  //       where: { id: childCourse.parentId },
+  //       relations: ['category'],
+  //     });
+
+  //     if (!parentCourse) {
+  //       throw new NotFoundException('Không tìm thấy khóa học gốc để đồng bộ');
+  //     }
+
+  //     parentCourse.title = childCourse.title;
+  //     parentCourse.description = childCourse.description;
+  //     parentCourse.requirements = childCourse.requirements;
+  //     parentCourse.learnings = childCourse.learnings;
+  //     parentCourse.price = childCourse.price;
+  //     parentCourse.originalPrice = childCourse.originalPrice;
+  //     parentCourse.discount = childCourse.discount;
+  //     parentCourse.image = childCourse.image;
+  //     parentCourse.level = childCourse.level;
+  //     parentCourse.category = childCourse.category;
+  //     parentCourse.isLive = childCourse.isLive;
+  //     parentCourse.hasDraft = false;
+  //     parentCourse.status = 'published';
+
+  //     for (const childChapter of childCourse.chapters) {
+  //       if (!childChapter.parentId) continue;
+
+  //       const targetChapter = await manager.findOne(Chapter, {
+  //         where: { id: childChapter.parentId },
+  //       });
+
+  //       if (targetChapter) {
+  //         targetChapter.title = childChapter.title;
+  //         targetChapter.order = childChapter.order;
+  //         await manager.save(targetChapter);
+
+  //         for (const childLesson of childChapter.lessons) {
+  //           if (!childLesson.parentId) continue;
+
+  //           const targetLesson = await manager.findOne(Lesson, {
+  //             where: { id: childLesson.parentId },
+  //             relations: ['videoAsset'],
+  //           });
+
+  //           if (targetLesson) {
+  //             targetLesson.title = childLesson.title;
+  //             targetLesson.content = childLesson.content;
+  //             targetLesson.order = childLesson.order;
+  //             targetLesson.duration = childLesson.duration;
+
+  //             if (childLesson.videoAsset) {
+  //               if (targetLesson.videoAsset) {
+  //                 targetLesson.videoAsset.publicId =
+  //                   childLesson.videoAsset.publicId;
+  //                 targetLesson.videoAsset.playbackId =
+  //                   childLesson.videoAsset.playbackId;
+  //                 targetLesson.videoAsset.duration =
+  //                   childLesson.videoAsset.duration;
+  //                 await manager.save(targetLesson.videoAsset);
+  //               } else {
+  //                 const newVideo = manager.create(LessonVideo, {
+  //                   publicId: childLesson.videoAsset.publicId,
+  //                   playbackId: childLesson.videoAsset.playbackId,
+  //                   duration: childLesson.videoAsset.duration,
+  //                   lesson: targetLesson,
+  //                 });
+  //                 await manager.save(newVideo);
+  //               }
+  //             }
+
+  //             await manager.delete(QuizQuestion, {
+  //               lesson: { id: targetLesson.id },
+  //             });
+
+  //             if (
+  //               childLesson.quizQuestions &&
+  //               childLesson.quizQuestions.length > 0
+  //             ) {
+  //               for (const childQuiz of childLesson.quizQuestions) {
+  //                 const newQuiz = manager.create(QuizQuestion, {
+  //                   id: uuidv4(),
+  //                   question: childQuiz.question,
+  //                   order: childQuiz.order,
+  //                   lesson: targetLesson,
+  //                 });
+  //                 const savedQuiz = await manager.save(newQuiz);
+
+  //                 let newCorrectId: string | null = null;
+  //                 for (const opt of childQuiz.options) {
+  //                   const newOptId = uuidv4();
+  //                   if (opt.id === childQuiz.correctOptionId) {
+  //                     newCorrectId = newOptId;
+  //                   }
+  //                   await manager.save(QuizOption, {
+  //                     id: newOptId,
+  //                     text: opt.text,
+  //                     question: savedQuiz,
+  //                   });
+  //                 }
+  //                 await manager.update(QuizQuestion, savedQuiz.id, {
+  //                   correctOptionId: newCorrectId ?? undefined,
+  //                 });
+  //               }
+  //             }
+  //             await manager.save(targetLesson);
+  //           }
+  //         }
+  //       }
+  //     }
+
+  //     await manager.save(parentCourse);
+
+  //     childCourse.status = 'published';
+  //     await manager.save(childCourse);
+  //     await manager.delete(Course, childCourse.id);
+  //     return {
+  //       success: true,
+  //       message: 'Đã phê duyệt và đồng bộ nội dung thành công',
+  //     };
+  //   });
+  // }
+
   async handleApproveChildCourse(childCourseId: string, adminId: string) {
     return await this.dataSource.transaction(async (manager) => {
+      // 1. Lấy thông tin bản nháp (Child) đầy đủ các cấp
       const childCourse = await manager.findOne(Course, {
         where: { id: childCourseId },
         relations: [
@@ -1083,16 +1231,13 @@ export class CourseService {
         ],
       });
 
-      if (!childCourse) {
-        throw new NotFoundException('Không tìm thấy bản nháp khóa học');
-      }
-
-      if (!childCourse.parentId) {
-        throw new BadRequestException(
-          'Khóa học này không phải là bản nháp (không có ParentId)',
+      if (!childCourse || !childCourse.parentId) {
+        throw new NotFoundException(
+          'Bản nháp không hợp lệ hoặc không phải bản nâng cấp',
         );
       }
 
+      // 2. Lấy khóa học gốc (Parent)
       const parentCourse = await manager.findOne(Course, {
         where: { id: childCourse.parentId },
         relations: ['category'],
@@ -1102,46 +1247,89 @@ export class CourseService {
         throw new NotFoundException('Không tìm thấy khóa học gốc để đồng bộ');
       }
 
-      parentCourse.title = childCourse.title;
-      parentCourse.description = childCourse.description;
-      parentCourse.requirements = childCourse.requirements;
-      parentCourse.learnings = childCourse.learnings;
-      parentCourse.price = childCourse.price;
-      parentCourse.originalPrice = childCourse.originalPrice;
-      parentCourse.discount = childCourse.discount;
-      parentCourse.image = childCourse.image;
-      parentCourse.level = childCourse.level;
-      parentCourse.category = childCourse.category;
-      parentCourse.isLive = childCourse.isLive;
-      parentCourse.hasDraft = false;
-      parentCourse.status = 'published';
+      // 3. Cập nhật thông tin cơ bản cho khóa học gốc
+      Object.assign(parentCourse, {
+        title: childCourse.title,
+        description: childCourse.description,
+        requirements: childCourse.requirements,
+        learnings: childCourse.learnings,
+        price: childCourse.price,
+        originalPrice: childCourse.originalPrice,
+        discount: childCourse.discount,
+        image: childCourse.image,
+        level: childCourse.level,
+        category: childCourse.category,
+        isLive: childCourse.isLive,
+        hasDraft: false,
+        status: 'published',
+        updated_at: moment().tz('Asia/Ho_Chi_Minh').toDate(),
+      });
+      await manager.save(parentCourse);
 
+      // 4. Duyệt qua từng Chapter của bản nháp
       for (const childChapter of childCourse.chapters) {
-        if (!childChapter.parentId) continue;
+        let targetChapter: Chapter | null = null;
 
-        const targetChapter = await manager.findOne(Chapter, {
-          where: { id: childChapter.parentId },
-        });
+        if (childChapter.parentId) {
+          // Tìm Chapter cũ để cập nhật
+          targetChapter = await manager.findOne(Chapter, {
+            where: { id: childChapter.parentId },
+          });
+        }
 
         if (targetChapter) {
+          // TRƯỜNG HỢP CẬP NHẬT
           targetChapter.title = childChapter.title;
           targetChapter.order = childChapter.order;
-          await manager.save(targetChapter);
+          targetChapter = await manager.save(targetChapter);
+        } else {
+          // TRƯỜNG HỢP TẠO MỚI (Chương mới thêm ở bản nháp)
+          targetChapter = manager.create(Chapter, {
+            id: uuidv4(),
+            title: childChapter.title,
+            order: childChapter.order,
+            course: parentCourse,
+          });
+          targetChapter = await manager.save(targetChapter);
+        }
 
+        // 5. Kiểm tra an toàn trước khi xử lý Lesson
+        if (targetChapter) {
           for (const childLesson of childChapter.lessons) {
-            if (!childLesson.parentId) continue;
+            let targetLesson: Lesson | null = null;
 
-            const targetLesson = await manager.findOne(Lesson, {
-              where: { id: childLesson.parentId },
-              relations: ['videoAsset'],
-            });
+            if (childLesson.parentId) {
+              // Tìm Lesson cũ để cập nhật
+              targetLesson = await manager.findOne(Lesson, {
+                where: { id: childLesson.parentId },
+                relations: ['videoAsset'],
+              });
+            }
 
             if (targetLesson) {
+              // TRƯỜNG HỢP CẬP NHẬT LESSON
               targetLesson.title = childLesson.title;
               targetLesson.content = childLesson.content;
               targetLesson.order = childLesson.order;
               targetLesson.duration = childLesson.duration;
+              targetLesson.chapter = targetChapter; // Gán lại chapter cha (quan trọng)
+              targetLesson = await manager.save(targetLesson);
+            } else {
+              // TRƯỜNG HỢP TẠO MỚI LESSON
+              targetLesson = manager.create(Lesson, {
+                id: uuidv4(),
+                title: childLesson.title,
+                content: childLesson.content,
+                order: childLesson.order,
+                duration: childLesson.duration,
+                chapter: targetChapter,
+              });
+              targetLesson = await manager.save(targetLesson);
+            }
 
+            // 6. Xử lý Video và Quiz (Chỉ chạy nếu targetLesson tồn tại)
+            if (targetLesson) {
+              // Đồng bộ Video Asset
               if (childLesson.videoAsset) {
                 if (targetLesson.videoAsset) {
                   targetLesson.videoAsset.publicId =
@@ -1162,6 +1350,7 @@ export class CourseService {
                 }
               }
 
+              // Đồng bộ Quiz (Xóa cũ - Tạo mới là cách an toàn nhất cho Quiz)
               await manager.delete(QuizQuestion, {
                 lesson: { id: targetLesson.id },
               });
@@ -1191,22 +1380,24 @@ export class CourseService {
                       question: savedQuiz,
                     });
                   }
-                  await manager.update(QuizQuestion, savedQuiz.id, {
-                    correctOptionId: newCorrectId ?? undefined,
-                  });
+
+                  if (newCorrectId) {
+                    await manager.update(QuizQuestion, savedQuiz.id, {
+                      correctOptionId: newCorrectId,
+                    });
+                  }
                 }
               }
-              await manager.save(targetLesson);
             }
           }
         }
       }
 
-      await manager.save(parentCourse);
-
+      // 7. Hoàn tất: Xóa bản nháp sau khi đã đồng bộ
       childCourse.status = 'published';
       await manager.save(childCourse);
       await manager.delete(Course, childCourse.id);
+
       return {
         success: true,
         message: 'Đã phê duyệt và đồng bộ nội dung thành công',
