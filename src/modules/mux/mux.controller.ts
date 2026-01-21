@@ -113,8 +113,8 @@ export class MuxController {
     if (data.type === 'video.asset.ready') {
       const passthrough = JSON.parse(data.data.passthrough) as MuxPassthrough;
       const { courseId, lessonId, taskId } = passthrough;
-
       const videoDataToSave = {
+        // playbackId: data.data.playback_ids[0].id,
         playbackId: data.data.playback_ids[0].id,
         assetId: data.data.id,
         lessonId: lessonId,
@@ -123,10 +123,17 @@ export class MuxController {
 
       const savedVideo =
         await this.lessonVideoService.saveLessonVideo(videoDataToSave);
+      const signedUrl = await this.muxService.getSignedVideoUrl(
+        savedVideo.playbackId,
+      );
+      const videoDataForFrontend = {
+        ...savedVideo,
+        videoUrl: signedUrl,
+      };
       console.log(
         `[${now}]  [CONTROLLER] Đã lưu DB thành công. Gửi tín hiệu WS cho Task: ${taskId}`,
       );
-      this.progressGateway.sendComplete(taskId, savedVideo);
+      this.progressGateway.sendComplete(taskId, videoDataForFrontend);
       return { received: true };
     } else if (data.type === 'video.asset.errored') {
       const passthrough = JSON.parse(data.data.passthrough) as MuxPassthrough;

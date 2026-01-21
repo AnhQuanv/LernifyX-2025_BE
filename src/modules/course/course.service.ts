@@ -43,6 +43,7 @@ import { QuizOption } from '../quiz_option/entities/quiz_option.entity';
 import { QuizQuestion } from '../quiz_question/entities/quiz_question.entity';
 import { Lesson } from '../lesson/entities/lesson.entity';
 import { Chapter } from '../chapter/entities/chapter.entity';
+import { MuxService } from '../mux/mux.service';
 
 interface GrossRevenueResult {
   grossRevenue: string | null;
@@ -55,6 +56,15 @@ export interface TeacherCourseTree {
     id: string;
     title: string;
   }[];
+}
+
+export interface SignedVideoAsset {
+  id: string;
+  playbackId: string;
+  videoUrl: string;
+  duration: number;
+  widthOriginal: number;
+  heightOriginal: number;
 }
 
 export interface CourseRevenueDetail {
@@ -118,6 +128,7 @@ export class CourseService {
     private readonly lessonProgressRepository: Repository<LessonProgress>,
     @Inject('CLOUDINARY')
     private readonly cloudinary: typeof Cloudinary,
+    private readonly muxService: MuxService,
   ) {}
 
   async handleFilterCourses(
@@ -639,10 +650,12 @@ export class CourseService {
         canViewVideo && videoAsset
           ? {
               publicId: videoAsset.publicId,
-              originalUrl: videoAsset.originalUrl,
               duration: videoAsset.duration,
               width: videoAsset.widthOriginal,
               height: videoAsset.heightOriginal,
+              videoUrl: await this.muxService.getSignedVideoUrl(
+                videoAsset.playbackId,
+              ),
             }
           : null,
       progress,
@@ -701,7 +714,9 @@ export class CourseService {
       videoAsset: videoAsset
         ? {
             publicId: videoAsset.publicId,
-            originalUrl: videoAsset.originalUrl,
+            videoUrl: await this.muxService.getSignedVideoUrl(
+              videoAsset.playbackId,
+            ),
             duration: videoAsset.duration,
             width: videoAsset.widthOriginal,
             height: videoAsset.heightOriginal,
@@ -1133,15 +1148,15 @@ export class CourseService {
                 if (targetLesson.videoAsset) {
                   targetLesson.videoAsset.publicId =
                     childLesson.videoAsset.publicId;
-                  targetLesson.videoAsset.originalUrl =
-                    childLesson.videoAsset.originalUrl;
+                  targetLesson.videoAsset.playbackId =
+                    childLesson.videoAsset.playbackId;
                   targetLesson.videoAsset.duration =
                     childLesson.videoAsset.duration;
                   await manager.save(targetLesson.videoAsset);
                 } else {
                   const newVideo = manager.create(LessonVideo, {
                     publicId: childLesson.videoAsset.publicId,
-                    originalUrl: childLesson.videoAsset.originalUrl,
+                    playbackId: childLesson.videoAsset.playbackId,
                     duration: childLesson.videoAsset.duration,
                     lesson: targetLesson,
                   });
@@ -1587,17 +1602,14 @@ export class CourseService {
       .andWhere('course.instructor.userId = :teacherId', { teacherId })
       .leftJoinAndSelect('course.category', 'category')
       .leftJoinAndSelect('course.instructor', 'instructor')
-      .leftJoinAndSelect('course.chapters', 'chapter', undefined, {
-        orderBy: { 'chapter.order': 'ASC' },
-      })
-      .leftJoinAndSelect('chapter.lessons', 'lesson', undefined, {
-        orderBy: { 'lesson.order': 'ASC' },
-      })
+      .leftJoinAndSelect('course.chapters', 'chapter')
+      .leftJoinAndSelect('chapter.lessons', 'lesson')
       .leftJoinAndSelect('lesson.videoAsset', 'videoAsset')
-      .leftJoinAndSelect('lesson.quizQuestions', 'quizQuestion', undefined, {
-        orderBy: { 'quizQuestion.order': 'ASC' },
-      })
+      .leftJoinAndSelect('lesson.quizQuestions', 'quizQuestion')
       .leftJoinAndSelect('quizQuestion.options', 'option')
+      .orderBy('chapter.order', 'ASC')
+      .addOrderBy('lesson.order', 'ASC')
+      .addOrderBy('quizQuestion.order', 'ASC')
       .getOne();
 
     if (!course) {
@@ -1606,6 +1618,7 @@ export class CourseService {
         errorCode: 'RESOURCE_NOT_FOUND',
       });
     }
+
     if (course.instructor.userId !== teacherId) {
       throw new ForbiddenException({
         message: 'Bạn không có quyền truy cập khóa học này',
@@ -1613,41 +1626,62 @@ export class CourseService {
       });
     }
 
-    const formattedCourse = {
-      ...course,
-      chapters: course.chapters.map((chapter) => ({
-        ...chapter,
-        createdAt: undefined,
-        updatedAt: undefined,
-        lessons: chapter.lessons.map((lesson) => ({
-          ...lesson,
-          videoId: undefined,
-          createdAt: undefined,
-          updatedAt: undefined,
-          videoAsset: lesson.videoAsset
-            ? {
+    const formattedChapters = await Promise.all(
+      course.chapters.map(async (chapter) => {
+        const formattedLessons = await Promise.all(
+          chapter.lessons.map(async (lesson) => {
+            let signedVideoAsset: SignedVideoAsset | null = null;
+
+            if (lesson.videoAsset) {
+              const signedUrl = await this.muxService.getSignedVideoUrl(
+                lesson.videoAsset.playbackId,
+              );
+
+              signedVideoAsset = {
                 id: lesson.videoAsset.id,
-                originalUrl: lesson.videoAsset.originalUrl,
+                playbackId: lesson.videoAsset.playbackId,
+                videoUrl: signedUrl,
                 duration: lesson.videoAsset.duration,
                 widthOriginal: lesson.videoAsset.widthOriginal,
                 heightOriginal: lesson.videoAsset.heightOriginal,
-              }
-            : null,
-          hasQuiz: lesson.quizQuestions && lesson.quizQuestions.length > 0,
-          quiz: lesson.quizQuestions?.map((q) => ({
-            ...q,
-            createdAt: undefined,
-            updatedAt: undefined,
-            options: q.options.map((o) => ({
-              id: o.id,
-              text: o.text,
-            })),
-          })),
-        })),
-      })),
+              };
+            }
+
+            return {
+              ...lesson,
+              videoId: undefined,
+              createdAt: undefined,
+              updatedAt: undefined,
+              videoAsset: signedVideoAsset,
+              hasQuiz: lesson.quizQuestions && lesson.quizQuestions.length > 0,
+              quiz: lesson.quizQuestions?.map((q) => ({
+                ...q,
+                createdAt: undefined,
+                updatedAt: undefined,
+                options: q.options.map((o) => ({
+                  id: o.id,
+                  text: o.text,
+                })),
+              })),
+            };
+          }),
+        );
+
+        return {
+          ...chapter,
+          createdAt: undefined,
+          updatedAt: undefined,
+          lessons: formattedLessons,
+        };
+      }),
+    );
+
+    const formattedCourse = {
+      ...course,
+      chapters: formattedChapters,
     };
-    const result = plainToInstance(CourseDetailDto, formattedCourse);
-    return result;
+
+    return plainToInstance(CourseDetailDto, formattedCourse);
   }
 
   async handleGetTeacherCoursesRevenue(teacherId: string) {

@@ -66,7 +66,8 @@ export class MuxService {
       const upload = await this.mux.video.uploads.create({
         new_asset_settings: {
           passthrough: JSON.stringify({ courseId, lessonId, taskId }),
-          playback_policy: ['public'],
+          // playback_policy: ['public'],
+          playback_policy: ['signed'],
         },
         timeout: 3600,
         cors_origin: '*',
@@ -172,5 +173,20 @@ export class MuxService {
       }
       await this.lessonVideoRepository.remove(lessonVideo);
     }
+  }
+
+  async getSignedVideoUrl(playbackId: string) {
+    const keyId = this.configService.get<string>('MUX_SIGNING_KEY');
+    const privateKey = this.configService.get<string>('MUX_PRIVATE_KEY');
+
+    // Tạo JWT Token
+    const token = await this.mux.jwt.signPlaybackId(playbackId, {
+      keyId: keyId,
+      keySecret: privateKey,
+      type: 'video',
+      expiration: '6h',
+    });
+
+    return `https://stream.mux.com/${playbackId}.m3u8?token=${token}`;
   }
 }

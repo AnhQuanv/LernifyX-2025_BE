@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { CourseService } from './course.service';
 import { CourseController } from './course.controller';
 import { Course } from './entities/course.entity';
@@ -15,6 +15,7 @@ import { Lesson } from '../lesson/entities/lesson.entity';
 import { Chapter } from '../chapter/entities/chapter.entity';
 import { PaymentItem } from '../payment_items/entities/payment_item.entity';
 import { LessonProgress } from '../lesson_progress/entities/lesson_progress.entity';
+import { MuxModule } from '../mux/mux.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { LessonProgress } from '../lesson_progress/entities/lesson_progress.enti
       LessonProgress,
     ]),
     CloudinaryModule,
+    forwardRef(() => MuxModule),
   ],
   controllers: [CourseController],
   providers: [CourseService],

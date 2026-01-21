@@ -16,8 +16,8 @@ export class LessonVideo {
   @Column({ name: 'public_id', type: 'varchar' })
   publicId: string;
 
-  @Column({ name: 'original_url', type: 'varchar', nullable: true })
-  originalUrl: string;
+  @Column({ name: 'playback_id', type: 'varchar', nullable: true })
+  playbackId: string;
 
   @Column({ name: 'duration', type: 'int', default: 0 })
   duration: number;

@@ -44,7 +44,7 @@ export class Lesson {
     onDelete: 'SET NULL',
   })
   @JoinColumn({ name: 'video_id' })
-  videoAsset: LessonVideo;
+  videoAsset: LessonVideo | null;
 
   @Column({ name: 'order', type: 'int', default: 0 })
   order: number;

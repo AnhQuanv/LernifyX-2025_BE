@@ -40,8 +40,10 @@ interface CourseData {
 const sampleImageUrl =
   'https://res.cloudinary.com/drc4b7rmj/image/upload/v1768789610/vbe4kndubkbwfmxzr4th.jpg';
 
-const sampleOriginalUrl =
-  'https://stream.mux.com/J02MyoiL7n4184AXGA01SL02kgaZCNcHgi1hOsy7HOOES00.m3u8';
+// const sampleOriginalUrl =
+//   'https://stream.mux.com/J02MyoiL7n4184AXGA01SL02kgaZCNcHgi1hOsy7HOOES00.m3u8';
+
+const playbackId = 'sn6YhdrRyYLyeJMRLJUXDTGiAt58cPGHyVWezP6DLkM';
 const sampleDuration = 207;
 const sampleWidth = 576;
 const sampleHeight = 360;
@@ -7321,7 +7323,6 @@ export const seedCourses1 = async (dataSource: DataSource) => {
       for (let j = 0; j < chapterData.lessons.length; j++) {
         const lessonData = chapterData.lessons[j];
 
-        // Tạo Lesson
         const lesson = lessonRepo.create({
           id: uuidv4(),
           title: lessonData.title,
@@ -7336,7 +7337,7 @@ export const seedCourses1 = async (dataSource: DataSource) => {
         const videoAsset = lessonVideoRepo.create({
           lesson: lesson,
           publicId: uuidv4(),
-          originalUrl: sampleOriginalUrl,
+          playbackId: playbackId,
           duration: sampleDuration,
           widthOriginal: sampleWidth,
           heightOriginal: sampleHeight,

@@ -10,7 +10,7 @@ import { CourseService } from '../course/course.service';
 
 export interface VideoUrlsResult {
   id: string;
-  originalUrl: string;
+  playbackId: string;
   duration: number;
   widthOriginal: number;
   heightOriginal: number;
@@ -50,7 +50,7 @@ export class LessonVideoService {
     const muxDetails = await this.muxService.getAssetDetails(data.assetId);
     const newVideoAsset = this.lessonVideoRepository.create({
       publicId: data.assetId,
-      originalUrl: `https://stream.mux.com/${data.playbackId}.m3u8`,
+      playbackId: data.playbackId,
       duration: Math.round(muxDetails.duration),
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       widthOriginal: muxDetails.width,
@@ -67,7 +67,7 @@ export class LessonVideoService {
     await this.courseService.updateCourseDuration(data.courseId);
     return {
       id: savedVideo.id,
-      originalUrl: savedVideo.originalUrl,
+      playbackId: savedVideo.playbackId,
       duration: savedVideo.duration,
       widthOriginal: savedVideo.widthOriginal,
       heightOriginal: savedVideo.heightOriginal,
