@@ -27,6 +27,9 @@ export class Payment {
   @Column()
   gateway: string;
 
+  @Column({ type: 'boolean', default: false })
+  is_activated: boolean;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   gateway_transaction_id: string | null;
 

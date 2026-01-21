@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
 
 export class CreateLessonNoteDto {
   @IsString()
@@ -8,4 +8,8 @@ export class CreateLessonNoteDto {
   @IsString()
   @IsNotEmpty()
   text: string;
+
+  @IsNotEmpty()
+  @IsNumber()
+  videoTimestamp: number;
 }

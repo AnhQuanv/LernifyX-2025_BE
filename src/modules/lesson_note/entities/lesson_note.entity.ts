@@ -21,6 +21,9 @@ export class LessonNote {
   })
   createdAt: Date;
 
+  @Column({ name: 'video_timestamp', type: 'float', default: 0 })
+  videoTimestamp: number;
+
   @Column({
     name: 'updated_at',
     type: 'timestamp',

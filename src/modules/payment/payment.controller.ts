@@ -88,11 +88,13 @@ export class PaymentController {
 
   @Post('momo-ipn')
   async momoIPN(@Body() body: MoMoReturnQuery) {
+    console.log('MoMo ipn: ', body);
     return await this.paymentService.handleMoMoIPN(body);
   }
 
   @Get('momo-return')
   async momoReturn(@Query() query: MoMoReturnQuery, @Res() res: Response) {
+    console.log('MoMo return: ', query);
     return await this.paymentService.handleMoMoReturn(query, res);
   }
 
@@ -216,6 +218,28 @@ export class PaymentController {
       { status, page, limit },
       userId,
     );
+    return ApiResponse.success(result, 'Lấy danh sách hóa đơn thành công');
+  }
+
+  @Get('admin-payment-history')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async getPaymentsForAdmin(
+    @Query('status') status = 'all',
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 6,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('search') search?: string,
+  ) {
+    const result = await this.paymentService.handelGetPaymentsForAdmin({
+      status,
+      page,
+      limit,
+      startDate,
+      endDate,
+      search,
+    });
     return ApiResponse.success(result, 'Lấy danh sách hóa đơn thành công');
   }
 

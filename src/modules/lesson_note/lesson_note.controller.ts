@@ -33,6 +33,7 @@ export class LessonNoteController {
       dto.progressId,
       req.user.sub,
       dto.text,
+      dto.videoTimestamp,
     );
     return ApiResponse.success(newNote, 'Note created successfully');
   }

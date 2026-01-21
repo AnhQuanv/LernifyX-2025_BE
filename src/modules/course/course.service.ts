@@ -591,6 +591,7 @@ export class CourseService {
               ?.map((n) => ({
                 id: n.id,
                 text: n.text,
+                videoTimestamp: n.videoTimestamp,
                 createdAt: n.createdAt,
                 updatedAt: n.updatedAt,
               }))

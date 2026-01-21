@@ -186,7 +186,7 @@ export class PaymentService {
       );
 
       return res.redirect(
-        `${process.env.CLIENT_URL}/checkout/result?status=invalid_signature`,
+        `${process.env.CLIENT_URL}/checkout/result?status=failed`,
       );
     }
 
@@ -373,6 +373,7 @@ export class PaymentService {
     const orderInfo = `Thanh toan MoMo cho order ${orderId}`;
     const redirectUrl = process.env.MOMO_REDIRECT_URL!;
     const ipnUrl = process.env.MOMO_IPN_URL!;
+    // 'https://shadowlike-impartially-shantae.ngrok-free.dev/v1/payment/momo-ipn';
     const extraData = '';
     const rawSignature =
       `accessKey=${accessKey}` +
@@ -411,6 +412,7 @@ export class PaymentService {
         'https://test-payment.momo.vn/v2/gateway/api/create',
         requestBody,
       );
+      console.log('momoRes.data: ', momoRes.data);
 
       const payUrl = momoRes.data.payUrl;
 
@@ -438,8 +440,168 @@ export class PaymentService {
     }
   }
 
+  private async activateOrder(payment: Payment) {
+    if (payment.is_activated) return;
+
+    const userId = payment.user.userId;
+    const courseIds = payment.items.map((i) => i.course.id);
+
+    if (courseIds.length > 0) {
+      await this.wishlistRepo
+        .createQueryBuilder()
+        .delete()
+        .where('user_id = :userId', { userId })
+        .andWhere('course_id IN (:...courseIds)', { courseIds })
+        .execute();
+
+      await this.cartRepo
+        .createQueryBuilder()
+        .update(CartItem)
+        .set({ isPurchased: true })
+        .where('user_id = :userId', { userId })
+        .andWhere('course_id IN (:...courseIds)', { courseIds })
+        .execute();
+
+      for (const id of courseIds) {
+        await this.courseRepo
+          .createQueryBuilder()
+          .update(Course)
+          .set({ students: () => 'students + 1' })
+          .where('id = :id', { id })
+          .execute();
+      }
+    }
+
+    payment.is_activated = true;
+    payment.paid_at = new Date();
+    await this.paymentRepo.save(payment);
+  }
+
+  // async handleMoMoReturn(query: MoMoReturnQuery, res: Response) {
+  //   const orderId = query.orderId;
+
+  //   const payment = await this.paymentRepo.findOne({
+  //     where: { transaction_ref: orderId },
+  //     relations: ['items', 'items.course', 'user'],
+  //   });
+
+  //   if (!payment) {
+  //     return res.redirect(
+  //       `${process.env.CLIENT_URL}/checkout/result?status=not_found`,
+  //     );
+  //   }
+
+  //   payment.status = query.resultCode === '0' ? 'success' : 'failed';
+  //   payment.gateway_transaction_id = query.transId || null;
+  //   payment.bankCode = query.payType || null;
+  //   payment.paid_at = new Date();
+  //   payment.response_code = query.resultCode;
+  //   payment.message =
+  //     MoMoResponseMessages[query.resultCode] ||
+  //     query.message ||
+  //     'Unknown error';
+
+  //   payment.raw_response = query;
+  //   await this.paymentRepo.save(payment);
+
+  //   if (payment.status === 'success') {
+  //     const userId = payment.user.userId;
+
+  //     await this.wishlistRepo
+  //       .createQueryBuilder()
+  //       .delete()
+  //       .where('user_id = :userId', { userId })
+  //       .andWhere('course_id IN (:...courseIds)', {
+  //         courseIds: payment.items.map((i) => i.course.id),
+  //       })
+  //       .execute();
+  //     await this.cartRepo
+  //       .createQueryBuilder()
+  //       .update(CartItem)
+  //       .set({ isPurchased: true })
+  //       .where('user_id = :userId', { userId })
+  //       .andWhere('course_id IN (:...courseIds)', {
+  //         courseIds: payment.items.map((i) => i.course.id),
+  //       })
+  //       .execute();
+
+  //     for (const item of payment.items) {
+  //       const courseId = item.course.id;
+  //       await this.courseRepo
+  //         .createQueryBuilder()
+  //         .update(Course)
+  //         .set({ students: () => 'students + 1' })
+  //         .where('id = :id', { id: courseId })
+  //         .execute();
+  //     }
+  //   }
+
+  //   return res.redirect(
+  //     `${process.env.CLIENT_URL}/checkout/result?status=${payment.status}&id=${payment.id}`,
+  //   );
+  // }
+
+  private verifyMoMoSignature(data: any): boolean {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const { signature, ...rest } = data;
+      const secretKey = process.env.MOMO_SECRET_KEY;
+
+      if (!secretKey) {
+        console.error('MOMO_SECRET_KEY is not defined in .env');
+        return false;
+      }
+
+      // Lưu ý: Các giá trị này lấy trực tiếp từ tham số MoMo gửi về trong 'data'
+      const rawSignature = [
+        `accessKey=${process.env.MOMO_ACCESS_KEY}`,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        `amount=${rest.amount}`,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        `extraData=${rest.extraData || ''}`,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        `message=${rest.message}`,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        `orderId=${rest.orderId}`,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        `orderInfo=${rest.orderInfo}`,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        `orderType=${rest.orderType}`,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        `partnerCode=${rest.partnerCode}`,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        `requestId=${rest.requestId}`,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        `responseTime=${rest.responseTime}`,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        `resultCode=${rest.resultCode}`,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        `transId=${rest.transId}`,
+      ].join('&');
+
+      //  Tạo mã băm HMAC-SHA256 với Secret Key
+      const generatedSignature = crypto
+        .createHmac('sha256', secretKey)
+        .update(rawSignature)
+        .digest('hex');
+
+      //  So sánh chữ ký của bạn tạo ra với chữ ký MoMo gửi sang
+      return generatedSignature === signature;
+    } catch (error) {
+      console.error('Lỗi khi xác thực chữ ký MoMo:', error);
+      return false;
+    }
+  }
+
   async handleMoMoReturn(query: MoMoReturnQuery, res: Response) {
-    const orderId = query.orderId;
+    // const isValid = this.verifyMoMoSignature(query);
+    // if (!isValid) {
+    //   console.error('CẢNH BÁO: Signature không hợp lệ tại MoMo Return!');
+    //   return res.redirect(
+    //     `${process.env.CLIENT_URL}/checkout/result?status=failed&message=invalid_signature`,
+    //   );
+    // }
+    const { orderId, resultCode, transId, payType, message, amount } = query;
 
     const payment = await this.paymentRepo.findOne({
       where: { transaction_ref: orderId },
@@ -448,53 +610,34 @@ export class PaymentService {
 
     if (!payment) {
       return res.redirect(
-        `${process.env.CLIENT_URL}/checkout/result?status=not_found`,
+        `${process.env.CLIENT_URL}/checkout/result?status=failed`,
+      );
+    }
+    const incomingAmount = Number(amount);
+    const dbAmount = Number(payment.amount);
+    if (incomingAmount !== dbAmount) {
+      console.log('amout: ', amount, payment.amount);
+      console.error('CẢNH BÁO: Số tiền thanh toán không khớp!');
+      payment.status = 'failed';
+      payment.message = 'Số tiền không khớp với đơn hàng';
+      await this.paymentRepo.save(payment);
+
+      return res.redirect(
+        `${process.env.CLIENT_URL}/checkout/result?status=failed&message=invalid_amount`,
       );
     }
 
-    payment.status = query.resultCode === '0' ? 'success' : 'failed';
-    payment.gateway_transaction_id = query.transId || null;
-    payment.bankCode = query.payType || null;
-    payment.paid_at = new Date();
-    payment.response_code = query.resultCode;
-    payment.message =
-      MoMoResponseMessages[query.resultCode] ||
-      query.message ||
-      'Unknown error';
-
+    payment.status = resultCode === '0' ? 'success' : 'failed';
+    payment.gateway_transaction_id = transId || null;
+    payment.bankCode = payType || null;
+    payment.response_code = resultCode;
+    payment.message = MoMoResponseMessages[resultCode] || message || 'Error';
     payment.raw_response = query;
+
     await this.paymentRepo.save(payment);
 
-    if (payment.status === 'success') {
-      const userId = payment.user.userId;
-
-      await this.wishlistRepo
-        .createQueryBuilder()
-        .delete()
-        .where('user_id = :userId', { userId })
-        .andWhere('course_id IN (:...courseIds)', {
-          courseIds: payment.items.map((i) => i.course.id),
-        })
-        .execute();
-      await this.cartRepo
-        .createQueryBuilder()
-        .update(CartItem)
-        .set({ isPurchased: true })
-        .where('user_id = :userId', { userId })
-        .andWhere('course_id IN (:...courseIds)', {
-          courseIds: payment.items.map((i) => i.course.id),
-        })
-        .execute();
-
-      for (const item of payment.items) {
-        const courseId = item.course.id;
-        await this.courseRepo
-          .createQueryBuilder()
-          .update(Course)
-          .set({ students: () => 'students + 1' })
-          .where('id = :id', { id: courseId })
-          .execute();
-      }
+    if (payment.status === 'success' && payment.is_activated === false) {
+      await this.activateOrder(payment);
     }
 
     return res.redirect(
@@ -502,25 +645,60 @@ export class PaymentService {
     );
   }
 
+  // async handleMoMoIPN(body: MoMoReturnQuery) {
+  //   const { orderId, resultCode, message, transId } = body;
+
+  //   const payment = await this.paymentRepo.findOne({
+  //     where: { transaction_ref: orderId },
+  //   });
+
+  //   if (!payment) return { message: 'order_not_found', resultCode: 1001 };
+
+  //   payment.status = resultCode === '0' ? 'success' : 'failed';
+  //   payment.gateway_transaction_id = transId || null;
+  //   payment.message = message || null;
+  //   payment.response_code = body.resultCode;
+  //   payment.paid_at = new Date();
+  //   payment.raw_response = body;
+
+  //   await this.paymentRepo.save(payment);
+
+  //   return { message: 'success', resultCode: 0 };
+  // }
+
   async handleMoMoIPN(body: MoMoReturnQuery) {
+    // const isValid = this.verifyMoMoSignature(body);
+    // if (!isValid) {
+    //   console.error('CẢNH BÁO: IPN giả mạo!');
+    //   return { message: 'Invalid signature', resultCode: 99 };
+    // }
     const { orderId, resultCode, message, transId } = body;
 
     const payment = await this.paymentRepo.findOne({
       where: { transaction_ref: orderId },
+      relations: ['items', 'items.course', 'user'],
     });
 
-    if (!payment) return { message: 'order_not_found', resultCode: 1001 };
+    if (!payment) return { message: 'Order not found', resultCode: 1001 };
+
+    if (payment.status === 'success' && payment.is_activated) {
+      return { message: 'Success', resultCode: 0 };
+    }
 
     payment.status = resultCode === '0' ? 'success' : 'failed';
     payment.gateway_transaction_id = transId || null;
+    payment.response_code = resultCode;
     payment.message = message || null;
-    payment.response_code = body.resultCode;
     payment.paid_at = new Date();
     payment.raw_response = body;
 
     await this.paymentRepo.save(payment);
 
-    return { message: 'success', resultCode: 0 };
+    if (payment.status === 'success') {
+      await this.activateOrder(payment);
+    }
+
+    return { message: 'Success', resultCode: 0 };
   }
 
   async handelGetPayments(
@@ -551,6 +729,89 @@ export class PaymentService {
       status: payment.status,
       gateway: payment.gateway,
       paidAt: payment.paid_at ?? undefined,
+      createdAt: payment.created_at,
+      items: payment.items.map((item) => ({
+        id: item.id,
+        courseId: item.course.id,
+        title: item.course.title,
+        instructor: item.course.instructor.fullName,
+        price: Number(item.price),
+        image: item.course.image,
+      })),
+    }));
+
+    return {
+      data: filteredPayments,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async handelGetPaymentsForAdmin({
+    status = 'all',
+    page = 1,
+    limit = 10,
+    startDate,
+    endDate,
+    search,
+  }: {
+    status?: string;
+    page?: number;
+    limit?: number;
+    startDate?: string;
+    endDate?: string;
+    search?: string;
+  }) {
+    const query = this.paymentRepo
+      .createQueryBuilder('payment')
+      .leftJoinAndSelect('payment.user', 'user')
+      .leftJoinAndSelect('payment.items', 'item')
+      .leftJoinAndSelect('item.course', 'course')
+      .leftJoinAndSelect('course.instructor', 'instructor')
+      .orderBy('payment.created_at', 'DESC');
+    if (status !== 'all') {
+      query.andWhere('payment.status = :status', { status });
+    }
+
+    if (startDate) {
+      query.andWhere('payment.created_at >= :startDate', {
+        startDate: new Date(`${startDate} 00:00:00`),
+      });
+    }
+    if (endDate) {
+      query.andWhere('payment.created_at <= :endDate', {
+        endDate: new Date(`${endDate} 23:59:59`),
+      });
+    }
+
+    if (search) {
+      query.andWhere(
+        '(payment.transaction_ref LIKE :search OR user.fullName LIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    // Phân trang
+    query.skip((page - 1) * limit).take(limit);
+
+    const [payments, total] = await query.getManyAndCount();
+
+    const filteredPayments = payments.map((payment) => ({
+      id: payment.id,
+      customer: {
+        id: payment.user?.userId,
+        name: payment.user?.fullName,
+        email: payment.user?.email,
+      },
+      transactionRef: payment.transaction_ref,
+      amount: Number(payment.amount),
+      status: payment.status,
+      gateway: payment.gateway,
+      paidAt: payment.paid_at,
       createdAt: payment.created_at,
       items: payment.items.map((item) => ({
         id: item.id,

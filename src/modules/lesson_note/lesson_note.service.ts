@@ -18,7 +18,12 @@ export class LessonNoteService {
     private readonly progressRepo: Repository<LessonProgress>,
   ) {}
 
-  async create(progressId: string, userId: string, text: string) {
+  async create(
+    progressId: string,
+    userId: string,
+    text: string,
+    videoTimestamp: number,
+  ) {
     const progress = await this.progressRepo.findOne({
       where: { id: progressId },
       relations: ['user'],
@@ -30,6 +35,7 @@ export class LessonNoteService {
     const note = this.noteRepo.create({
       text,
       progress,
+      videoTimestamp,
     });
     const savedNote = await this.noteRepo.save(note);
 
@@ -37,6 +43,7 @@ export class LessonNoteService {
       id: savedNote.id,
       text: savedNote.text,
       progressId: progress.id,
+      videoTimestamp: savedNote.videoTimestamp,
       createdAt: savedNote.createdAt,
       updatedAt: savedNote.updatedAt,
     };

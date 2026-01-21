@@ -111,13 +111,37 @@ function getTargetDatesForLastYear(maxMonths: number): Date[] {
   return dates;
 }
 
+// function getRandomDateInMonth(targetDate: Date): Date {
+//   const now = new Date();
+//   const isCurrentMonth =
+//     targetDate.getFullYear() === now.getFullYear() &&
+//     targetDate.getMonth() === now.getMonth();
+//   const maxDay = isCurrentMonth ? now.getDate() : 28;
+//   const randomDay = Math.floor(Math.random() * maxDay) + 1;
+//   const date = new Date(
+//     targetDate.getFullYear(),
+//     targetDate.getMonth(),
+//     randomDay,
+//     Math.floor(Math.random() * 23),
+//     Math.floor(Math.random() * 59),
+//   );
+//   return date > now ? now : date;
+// }
+
 function getRandomDateInMonth(targetDate: Date): Date {
   const now = new Date();
   const isCurrentMonth =
     targetDate.getFullYear() === now.getFullYear() &&
     targetDate.getMonth() === now.getMonth();
-  const maxDay = isCurrentMonth ? now.getDate() : 28;
+  const lastDayOfTargetMonth = new Date(
+    targetDate.getFullYear(),
+    targetDate.getMonth() + 1,
+    0,
+  ).getDate();
+  const maxDay = isCurrentMonth ? now.getDate() : lastDayOfTargetMonth;
+
   const randomDay = Math.floor(Math.random() * maxDay) + 1;
+
   const date = new Date(
     targetDate.getFullYear(),
     targetDate.getMonth(),
@@ -125,6 +149,7 @@ function getRandomDateInMonth(targetDate: Date): Date {
     Math.floor(Math.random() * 23),
     Math.floor(Math.random() * 59),
   );
+
   return date > now ? now : date;
 }
 
@@ -242,6 +267,7 @@ export async function paymentSeedFor12Month(dataSource: DataSource) {
             commentRepo.create({
               user: savedUser,
               lesson: lesson,
+              course: course,
               content:
                 LESSON_COMMENT_TEXTS[
                   Math.floor(Math.random() * LESSON_COMMENT_TEXTS.length)

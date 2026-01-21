@@ -212,7 +212,8 @@ export class AuthService {
       await this.mailerService.sendMail({
         to: savedUser.email,
         subject: 'Activate your LearnifyX account',
-        template: 'verify.hbs',
+        // template: 'verify.hbs',
+        template: 'mail/verify',
         context: {
           name: savedUser.fullName,
           activationCode: codeId,
@@ -298,10 +299,12 @@ export class AuthService {
       await this.mailerService.sendMail({
         to: savedUser.email,
         subject: 'Reset your LearnifyX password',
-        template: 'reset-password',
+        // template: 'reset-password',
+        template: 'mail/password_reset',
         context: {
           name: savedUser.fullName,
-          otpCode: codeId,
+          activationCode: codeId,
+          // otpCode: codeId,
           expiresAtFormatted: codeExpiresAt.format('HH:mm:ss [on] DD/MM/YYYY'),
         },
       });
@@ -340,7 +343,8 @@ export class AuthService {
     await this.mailerService.sendMail({
       to: savedUser.email,
       subject: 'Verify your LearnifyX account',
-      template: 'verify.hbs',
+      // template: 'verify.hbs',
+      template: 'mail/verify',
       context: {
         name: savedUser.fullName,
         activationCode: codeId,
