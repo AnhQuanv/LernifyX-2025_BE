@@ -17,6 +17,7 @@ import {
   VNPay,
   VnpLocale,
 } from 'vnpay';
+import moment from 'moment-timezone';
 import { applyTimeFilter, formatDate } from 'src/common/helpers/utils';
 import { Response } from 'express';
 import {
@@ -138,6 +139,8 @@ export class PaymentService {
     const tax = Math.round(total * 0.1);
     const totalWithTax = total + tax;
 
+    const now = moment().tz('Asia/Ho_Chi_Minh');
+
     const transaction_ref = `TXN-${nanoid(8).toUpperCase()}`;
     // 3. Tạo Payment
     const payment = this.paymentRepo.create({
@@ -147,6 +150,7 @@ export class PaymentService {
       gateway,
       transaction_ref: transaction_ref,
       order_info: `Thanh toan VNPay cho don hang ${transaction_ref}`,
+      created_at: now.toDate(),
     });
     await this.paymentRepo.save(payment);
 
@@ -172,6 +176,7 @@ export class PaymentService {
       hashAlgorithm: HashAlgorithm.SHA512,
       loggerFn: ignoreLogger,
     });
+    const now = moment().tz('Asia/Ho_Chi_Minh');
 
     const isValid = vnPay.verifyReturnUrl(query as ReturnQueryFromVNPay);
     if (!isValid) {
@@ -182,6 +187,7 @@ export class PaymentService {
           raw_response: query,
           message: 'Invalid signature',
           response_code: 'invalid_signature',
+          paid_at: now.toDate(),
         },
       );
 

@@ -77,6 +77,7 @@ import { MailService } from './modules/auth/mail.service';
         UserPreference,
         LessonVideo,
       ],
+      timezone: '+07:00',
       synchronize: false,
       logging: false,
       migrationsRun: false,
