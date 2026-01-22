@@ -29,7 +29,12 @@ export class WishlistService {
   ) {
     const skip = (page - 1) * limit;
     const [wishlist, total] = await this.wishlistRepo.findAndCount({
-      where: { user: { userId } },
+      where: {
+        user: { userId },
+        course: {
+          status: 'published',
+        },
+      },
       relations: ['course', 'course.category', 'course.instructor'],
       order: { createdAt: 'DESC' },
       skip,

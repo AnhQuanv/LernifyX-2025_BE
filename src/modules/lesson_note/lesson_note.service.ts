@@ -67,6 +67,7 @@ export class LessonNoteService {
       progressId: note.progress.id,
       createdAt: savedNote.createdAt,
       updatedAt: savedNote.updatedAt,
+      videoTimestamp: savedNote.videoTimestamp,
     };
   }
 

@@ -25,7 +25,13 @@ export class CartItemService {
   async handleGetUserCart(userId: string, page: number = 1, limit: number = 6) {
     const skip = (page - 1) * limit;
     const [cart, total] = await this.cartRepo.findAndCount({
-      where: { user: { userId }, isPurchased: false },
+      where: {
+        user: { userId },
+        isPurchased: false,
+        course: {
+          status: 'published',
+        },
+      },
       relations: ['course', 'course.category', 'course.instructor'],
       order: { createdAt: 'DESC' },
       skip,

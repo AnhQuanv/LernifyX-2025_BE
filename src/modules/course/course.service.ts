@@ -163,8 +163,8 @@ export class CourseService {
     }
 
     if (search?.trim()) {
-      query.andWhere('LOWER(course.title) LIKE LOWER(:search)', {
-        search: `%${search}%`,
+      query.andWhere('LOWER(course.title) LIKE :search', {
+        search: `%${search.toLowerCase().trim()}%`,
       });
     }
 

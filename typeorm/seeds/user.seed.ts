@@ -18,7 +18,7 @@ export const seedUsers = async (dataSource: DataSource) => {
   const plainUsers = [
     {
       fullName: 'Nguyễn Văn A',
-      email: 'a@example.com',
+      email: 'admin@example.com',
       password: '123456',
       phone: '0909123456',
       dateOfBirth: '1990-01-01',
