@@ -44,6 +44,7 @@ import { LessonVideo } from './modules/lesson_video/entities/lesson_video.entity
 import { MuxModule } from './modules/mux/mux.module';
 import { join } from 'path';
 import { MailService } from './modules/auth/mail.service';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
@@ -137,7 +138,7 @@ import { MailService } from './modules/auth/mail.service';
     LessonVideoModule,
     MuxModule,
   ],
-  controllers: [],
+  controllers: [AppController],
   providers: [MailService],
   exports: [MailService],
 })

@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class Init1769001806392 implements MigrationInterface {
-    name = 'Init1769001806392'
+export class Init1769098892120 implements MigrationInterface {
+    name = 'Init1769098892120'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`CREATE TABLE \`refresh_token\` (\`refresh_token_id\` varchar(36) NOT NULL, \`token\` text NOT NULL, \`expires_at\` timestamp NOT NULL, \`is_revoked\` tinyint NOT NULL DEFAULT 0, \`created_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP(), \`updated_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP() ON UPDATE CURRENT_TIMESTAMP, \`userUserId\` varchar(36) NULL, PRIMARY KEY (\`refresh_token_id\`)) ENGINE=InnoDB`);
