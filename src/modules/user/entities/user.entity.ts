@@ -21,16 +21,16 @@ export class User {
   @PrimaryGeneratedColumn('uuid', { name: 'user_id' })
   userId: string;
 
-  @Column({ name: 'full_name', type: 'varchar' })
+  @Column({ name: 'full_name', type: 'varchar', length: 100 })
   fullName: string;
 
-  @Column({ type: 'varchar', unique: true })
+  @Column({ type: 'varchar', unique: true, length: 150 })
   email: string;
 
-  @Column({ type: 'varchar' })
+  @Column({ type: 'varchar', length: 255 })
   password: string;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ type: 'varchar', nullable: true, length: 15 })
   phone: string;
 
   @Column({ name: 'date_of_birth', type: 'date', nullable: true })
@@ -51,13 +51,18 @@ export class User {
   @Column({ name: 'is_active', type: 'boolean', default: false })
   isActive: boolean;
 
-  @Column({ name: 'code_id', type: 'int', nullable: true })
-  codeId: number | null;
+  @Column({
+    name: 'code_id',
+    type: 'varchar',
+    length: 6,
+    nullable: true,
+  })
+  codeId: string | null;
 
   @Column({ name: 'code_expires_at', type: 'timestamp', nullable: true })
   codeExpiresAt: Date | null;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ type: 'varchar', nullable: true, length: 255 })
   avatar: string | null;
 
   @Column({ name: 'has_preferences', type: 'boolean', default: false })

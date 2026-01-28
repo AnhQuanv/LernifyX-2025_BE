@@ -43,7 +43,8 @@ const sampleImageUrl =
 // const sampleOriginalUrl =
 //   'https://stream.mux.com/J02MyoiL7n4184AXGA01SL02kgaZCNcHgi1hOsy7HOOES00.m3u8';
 
-const playbackId = 'sn6YhdrRyYLyeJMRLJUXDTGiAt58cPGHyVWezP6DLkM';
+const playbackId = 'g501n7yduznQ9XBcuTajdMkLKok5BsA35RAGeyO01KLmA';
+const assetId = '2lB7sGfdafaOvrSylSAmaN3RdLsQp01GcPOxIHdO7lJA';
 const sampleDuration = 207;
 const sampleWidth = 576;
 const sampleHeight = 360;
@@ -7336,7 +7337,7 @@ export const seedCourses1 = async (dataSource: DataSource) => {
 
         const videoAsset = lessonVideoRepo.create({
           lesson: lesson,
-          publicId: uuidv4(),
+          publicId: assetId,
           playbackId: playbackId,
           duration: sampleDuration,
           widthOriginal: sampleWidth,

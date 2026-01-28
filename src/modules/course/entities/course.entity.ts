@@ -17,7 +17,7 @@ export class Course {
   @PrimaryGeneratedColumn('uuid', { name: 'id' })
   id: string;
 
-  @Column({ name: 'title', type: 'varchar', nullable: true })
+  @Column({ name: 'title', type: 'varchar', length: 255, nullable: true })
   title: string;
 
   @Column({ name: 'description', type: 'text', nullable: true })
@@ -53,13 +53,26 @@ export class Course {
   @Column({ name: 'image', type: 'varchar', nullable: true })
   image: string;
 
-  @Column('decimal', { precision: 3, scale: 2, default: 0 })
+  @Column('decimal', {
+    precision: 3,
+    scale: 2,
+    default: 0,
+    unsigned: true,
+  })
   rating: number;
 
-  @Column('int', { default: 0 })
+  @Column({
+    type: 'smallint',
+    unsigned: true,
+    default: 0,
+  })
   ratingCount: number;
 
-  @Column('int', { default: 0 })
+  @Column({
+    type: 'smallint',
+    unsigned: true,
+    default: 0,
+  })
   students: number;
 
   @Column({ type: 'varchar', length: 50, nullable: true })

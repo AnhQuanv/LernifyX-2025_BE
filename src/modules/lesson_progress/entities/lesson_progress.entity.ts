@@ -25,7 +25,7 @@ export class LessonProgress {
   @Column({ type: 'boolean', default: false })
   completed: boolean;
 
-  @Column({ type: 'int', default: 0 })
+  @Column({ type: 'smallint', default: 0 })
   lastPosition: number;
 
   @OneToMany(() => LessonNote, (note) => note.progress, { cascade: true })

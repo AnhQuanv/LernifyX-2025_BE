@@ -17,7 +17,7 @@ export class Chapter {
   @Column({ name: 'title', type: 'varchar', length: 255, nullable: true })
   title: string;
 
-  @Column({ name: 'order', type: 'int', default: 0 })
+  @Column({ name: 'order', type: 'smallint', default: 0 })
   order: number;
 
   @Column({ name: 'parent_id', type: 'uuid', nullable: true })

@@ -26,8 +26,7 @@ export class Lesson {
 
   @Column({
     name: 'duration',
-    type: 'int',
-    comment: 'Duration in second',
+    type: 'smallint',
     nullable: true,
   })
   duration: number;
@@ -46,7 +45,7 @@ export class Lesson {
   @JoinColumn({ name: 'video_id' })
   videoAsset: LessonVideo | null;
 
-  @Column({ name: 'order', type: 'int', default: 0 })
+  @Column({ name: 'order', type: 'smallint', default: 0 })
   order: number;
 
   @ManyToOne(() => Chapter, (chapter) => chapter.lessons, {

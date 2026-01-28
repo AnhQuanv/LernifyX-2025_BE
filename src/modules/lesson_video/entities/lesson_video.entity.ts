@@ -13,18 +13,18 @@ export class LessonVideo {
   })
   lesson: Lesson;
 
-  @Column({ name: 'public_id', type: 'varchar' })
+  @Column({ name: 'public_id', type: 'varchar', length: 255 })
   publicId: string;
 
-  @Column({ name: 'playback_id', type: 'varchar', nullable: true })
+  @Column({ name: 'playback_id', type: 'varchar', length: 50, nullable: true })
   playbackId: string;
 
-  @Column({ name: 'duration', type: 'int', default: 0 })
+  @Column({ name: 'duration', type: 'smallint', default: 0 })
   duration: number;
 
-  @Column({ name: 'width_original', type: 'int', nullable: true })
+  @Column({ name: 'width_original', type: 'smallint', nullable: true })
   widthOriginal: number;
 
-  @Column({ name: 'height_original', type: 'int', nullable: true })
+  @Column({ name: 'height_original', type: 'smallint', nullable: true })
   heightOriginal: number;
 }

@@ -31,7 +31,7 @@ export class QuizQuestion {
   @Column({ name: 'correct_option_id', type: 'uuid', nullable: true })
   correctOptionId: string;
 
-  @Column({ type: 'int', default: 0 })
+  @Column({ type: 'smallint', default: 0 })
   order: number;
 
   @Column({

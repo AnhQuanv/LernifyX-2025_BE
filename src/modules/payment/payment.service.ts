@@ -131,15 +131,23 @@ export class PaymentService {
       });
     }
 
-    const total = courses.reduce(
-      (sum, course) => sum + Number(course.price),
-      0,
-    );
+    const now = moment().tz('Asia/Ho_Chi_Minh');
+
+    const total = courses.reduce((sum, course) => {
+      const hasValidDiscount =
+        course.price !== null &&
+        course.discountExpiresAt &&
+        moment(course.discountExpiresAt).isAfter(now);
+
+      const finalPrice = hasValidDiscount
+        ? Number(course.price)
+        : Number(course.originalPrice || 0);
+
+      return sum + finalPrice;
+    }, 0);
 
     const tax = Math.round(total * 0.1);
     const totalWithTax = total + tax;
-
-    const now = moment().tz('Asia/Ho_Chi_Minh');
 
     const transaction_ref = `TXN-${nanoid(8).toUpperCase()}`;
     // 3. Tạo Payment
@@ -153,13 +161,21 @@ export class PaymentService {
       created_at: now.toDate(),
     });
     await this.paymentRepo.save(payment);
-
     // 4. Tạo PaymentItem cho từng course
     const items = courses.map((course) => {
+      const hasValidDiscount =
+        course.price !== null &&
+        course.discountExpiresAt &&
+        moment(course.discountExpiresAt).isAfter(now);
+
+      const finalItemPrice = hasValidDiscount
+        ? course.price
+        : course.originalPrice;
+
       return this.paymentItemRepo.create({
         payment,
         course,
-        price: course.price,
+        price: finalItemPrice || 0,
       });
     });
     await this.paymentItemRepo.save(items);
@@ -331,7 +347,20 @@ export class PaymentService {
       });
     }
 
-    const subTotal = courses.reduce((s, c) => s + Number(c.price), 0);
+    const now = moment().tz('Asia/Ho_Chi_Minh');
+
+    const subTotal = courses.reduce((sum, course) => {
+      const hasValidDiscount =
+        course.price !== null &&
+        course.discountExpiresAt &&
+        moment(course.discountExpiresAt).isAfter(now);
+
+      const selectedPrice = hasValidDiscount
+        ? Number(course.price)
+        : Number(course.originalPrice || 0);
+
+      return sum + selectedPrice;
+    }, 0);
 
     const vatRate = 0.1;
     const vatAmount = Math.round(subTotal * vatRate);
@@ -350,13 +379,22 @@ export class PaymentService {
 
     await this.paymentRepo.save(payment);
 
-    const items = courses.map((c) =>
-      this.paymentItemRepo.create({
+    const items = courses.map((course) => {
+      const hasValidDiscount =
+        course.price !== null &&
+        course.discountExpiresAt &&
+        moment(course.discountExpiresAt).isAfter(now);
+
+      const finalItemPrice = hasValidDiscount
+        ? course.price
+        : course.originalPrice;
+
+      return this.paymentItemRepo.create({
         payment,
-        course: c,
-        price: c.price,
-      }),
-    );
+        course,
+        price: finalItemPrice || 0,
+      });
+    });
 
     await this.paymentItemRepo.save(items);
 

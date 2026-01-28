@@ -189,7 +189,8 @@ export class AuthService {
       });
     }
 
-    const codeId = Math.floor(100000 + Math.random() * 900000);
+    const otpNumber = Math.floor(100000 + Math.random() * 900000);
+    const codeId = otpNumber.toString();
     const codeExpiresAt = dayjs().add(5, 'minute');
 
     // 3. Tạo User
@@ -236,7 +237,7 @@ export class AuthService {
         errorCode: 'RESOURCE_NOT_FOUND',
       });
     }
-    if (user.codeId !== codeId) {
+    if (user.codeId !== codeId.toString().trim()) {
       throw new BadRequestException({
         message: 'Mã xác thực không đúng',
         errorCode: 'INVALID_CODE',
@@ -279,7 +280,7 @@ export class AuthService {
     const codeId = Math.floor(100000 + Math.random() * 900000);
     const codeExpiresAt = dayjs().add(5, 'minute');
 
-    user.codeId = codeId;
+    user.codeId = codeId.toString().trim();
     user.codeExpiresAt = codeExpiresAt.toDate();
 
     const savedUser = await this.userRepository.save(user);
@@ -335,7 +336,7 @@ export class AuthService {
     const codeId = Math.floor(100000 + Math.random() * 900000);
     const codeExpiresAt = dayjs().add(5, 'minute');
 
-    user.codeId = codeId;
+    user.codeId = codeId.toString().trim();
     user.codeExpiresAt = codeExpiresAt.toDate();
 
     await this.userRepository.save(user);
@@ -374,7 +375,7 @@ export class AuthService {
       });
     }
 
-    if (user.codeId !== codeId) {
+    if (user.codeId !== codeId.toString().trim()) {
       throw new BadRequestException({
         message: 'Invalid verification code',
         errorCode: 'INVALID_CODE',

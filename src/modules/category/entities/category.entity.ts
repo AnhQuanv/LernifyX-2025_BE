@@ -6,7 +6,7 @@ export class Category {
   @PrimaryGeneratedColumn('uuid', { name: 'id' })
   categoryId: string;
 
-  @Column({ name: 'name', type: 'varchar' })
+  @Column({ name: 'name', type: 'varchar', length: 100 })
   categoryName: string;
 
   @OneToMany(() => Course, (course) => course.category)

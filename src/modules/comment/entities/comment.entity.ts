@@ -18,10 +18,10 @@ export class Comment {
   @Column({ type: 'text' })
   content: string;
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ type: 'tinyint', nullable: true })
   rating: number | null;
 
-  @Column({ type: 'varchar', length: 20, default: 'lesson' })
+  @Column({ type: 'varchar', length: 25, default: 'lesson' })
   type: 'course' | 'lesson';
 
   @ManyToOne(() => Comment, (comment) => comment.replies, {

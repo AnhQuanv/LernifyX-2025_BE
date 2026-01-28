@@ -21,10 +21,10 @@ export class Payment {
   @Column('decimal', { precision: 15, scale: 2 })
   amount: number;
 
-  @Column()
+  @Column({ type: 'varchar', length: 25 })
   status: string;
 
-  @Column()
+  @Column({ type: 'varchar', length: 25 })
   gateway: string;
 
   @Column({ type: 'boolean', default: false })
@@ -33,7 +33,7 @@ export class Payment {
   @Column({ type: 'varchar', length: 255, nullable: true })
   gateway_transaction_id: string | null;
 
-  @Column({ unique: true })
+  @Column({ type: 'varchar', length: 100, unique: true })
   transaction_ref: string;
 
   @Column({ default: 'VND' })

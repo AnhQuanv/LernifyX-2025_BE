@@ -11,8 +11,8 @@ import { Category } from '../../category/entities/category.entity';
 
 @Entity('user_preference')
 export class UserPreference {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid', { name: 'id' })
+  id: string;
 
   @ManyToOne(() => User, (user) => user.preferences)
   user: User;

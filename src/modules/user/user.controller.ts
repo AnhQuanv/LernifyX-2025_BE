@@ -51,7 +51,7 @@ export class UserController {
 
   @Put('change-password')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('student', 'teacher')
+  @Roles('student', 'teacher', 'admin')
   async changePassword(
     @Req() req: RequestWithUser,
     @Body() dto: UpdatePasswordDto,

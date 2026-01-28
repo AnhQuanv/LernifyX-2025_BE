@@ -38,9 +38,9 @@ export async function seedUserPreferences(dataSource: DataSource) {
   const preference = userPrefRepo.create({
     user: student,
     mainCategories: [category],
-    desiredLevels: ['Cơ Bản'],
+    desiredLevels: ['Trung Cấp'],
     learningGoals: ['Học để tìm việc Frontend'],
-    interestedSkills: ['JavaScript', 'React', 'HTML', 'CSS'],
+    interestedSkills: ['React', 'Frontend', 'Backend', 'Nodejs'],
   });
 
   await userPrefRepo.save(preference);
